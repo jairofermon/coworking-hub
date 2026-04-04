@@ -1,43 +1,49 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { FilterBar } from '@/components/FilterBar';
 import { StatusBadge } from '@/components/StatusBadge';
-import { mockFormasPagamento as initialFormas } from '@/data/mock';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FormaPagamento } from '@/types';
 import { FormaPagamentoFormDialog } from '@/components/formas-pagamento/FormaPagamentoFormDialog';
 import { FormaPagamentoDeleteDialog } from '@/components/formas-pagamento/FormaPagamentoDeleteDialog';
+import { fetchFormasPagamento, upsertFormaPagamento, deleteFormaPagamento } from '@/lib/api';
 
 export default function FormasPagamentoPage() {
-  const [formas, setFormas] = useState<FormaPagamento[]>(initialFormas);
+  const [formas, setFormas] = useState<FormaPagamento[]>([]);
   const [busca, setBusca] = useState('');
+  const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FormaPagamento | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState<FormaPagamento | null>(null);
 
+  async function loadData() {
+    try { setFormas(await fetchFormasPagamento()); } catch (e: any) { toast.error('Erro: ' + e.message); } finally { setLoading(false); }
+  }
+
+  useEffect(() => { loadData(); }, []);
+
   const filtered = formas.filter(f => f.nome.toLowerCase().includes(busca.toLowerCase()));
 
-  function handleSave(forma: FormaPagamento) {
-    setFormas(prev => {
-      const idx = prev.findIndex(f => f.id === forma.id);
-      if (idx >= 0) { const u = [...prev]; u[idx] = forma; return u; }
-      return [...prev, forma];
-    });
+  async function handleSave(forma: FormaPagamento) {
+    try { await upsertFormaPagamento(forma); await loadData(); } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!deleting) return;
-    setFormas(prev => prev.filter(f => f.id !== deleting.id));
-    toast.success(`"${deleting.nome}" excluída`);
-    setDeleteOpen(false);
-    setDeleting(null);
+    try {
+      await deleteFormaPagamento(deleting.id);
+      toast.success(`"${deleting.nome}" excluída`);
+      setDeleteOpen(false); setDeleting(null); await loadData();
+    } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
+
+  if (loading) return <div className="page-container flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="page-container">
@@ -81,7 +87,6 @@ export default function FormasPagamentoPage() {
           </TableBody>
         </Table>
       </Card>
-
       <FormaPagamentoFormDialog open={formOpen} onOpenChange={setFormOpen} forma={editing} onSave={handleSave} />
       <FormaPagamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} forma={deleting} onConfirm={handleDelete} />
     </div>
