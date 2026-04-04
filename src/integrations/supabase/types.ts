@@ -14,7 +14,338 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agendamentos: {
+        Row: {
+          cliente_id: string
+          contrato_id: string | null
+          created_at: string
+          data: string
+          hora_fim: string
+          hora_inicio: string
+          id: string
+          observacao: string | null
+          sala_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cliente_id: string
+          contrato_id?: string | null
+          created_at?: string
+          data: string
+          hora_fim: string
+          hora_inicio: string
+          id?: string
+          observacao?: string | null
+          sala_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cliente_id?: string
+          contrato_id?: string | null
+          created_at?: string
+          data?: string
+          hora_fim?: string
+          hora_inicio?: string
+          id?: string
+          observacao?: string | null
+          sala_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_sala_id_fkey"
+            columns: ["sala_id"]
+            isOneToOne: false
+            referencedRelation: "salas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clientes: {
+        Row: {
+          chave_pix: string | null
+          cpf_cnpj: string
+          created_at: string
+          data_nascimento: string | null
+          email: string
+          endereco_completo: string | null
+          especialidade: string | null
+          id: string
+          nome_razao_social: string
+          observacao: string | null
+          rg_inscricao_estadual: string | null
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          chave_pix?: string | null
+          cpf_cnpj?: string
+          created_at?: string
+          data_nascimento?: string | null
+          email?: string
+          endereco_completo?: string | null
+          especialidade?: string | null
+          id?: string
+          nome_razao_social: string
+          observacao?: string | null
+          rg_inscricao_estadual?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          chave_pix?: string | null
+          cpf_cnpj?: string
+          created_at?: string
+          data_nascimento?: string | null
+          email?: string
+          endereco_completo?: string | null
+          especialidade?: string | null
+          id?: string
+          nome_razao_social?: string
+          observacao?: string | null
+          rg_inscricao_estadual?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      contratos: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          desconta_taxa: boolean
+          forma_pagamento_id: string
+          id: string
+          observacao: string | null
+          plano_id: string
+          sala_id: string
+          status: string
+          updated_at: string
+          valor_liquido: number
+          valor_taxa: number
+          valor_total: number
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          desconta_taxa?: boolean
+          forma_pagamento_id: string
+          id?: string
+          observacao?: string | null
+          plano_id: string
+          sala_id: string
+          status?: string
+          updated_at?: string
+          valor_liquido?: number
+          valor_taxa?: number
+          valor_total?: number
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          desconta_taxa?: boolean
+          forma_pagamento_id?: string
+          id?: string
+          observacao?: string | null
+          plano_id?: string
+          sala_id?: string
+          status?: string
+          updated_at?: string
+          valor_liquido?: number
+          valor_taxa?: number
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_forma_pagamento_id_fkey"
+            columns: ["forma_pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "formas_pagamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_sala_id_fkey"
+            columns: ["sala_id"]
+            isOneToOne: false
+            referencedRelation: "salas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      disponibilidade_salas: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          dia_semana: number
+          hora_fim: string
+          hora_inicio: string
+          id: string
+          sala_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          dia_semana: number
+          hora_fim: string
+          hora_inicio: string
+          id?: string
+          sala_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          dia_semana?: number
+          hora_fim?: string
+          hora_inicio?: string
+          id?: string
+          sala_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disponibilidade_salas_sala_id_fkey"
+            columns: ["sala_id"]
+            isOneToOne: false
+            referencedRelation: "salas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      formas_pagamento: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          dias_recebimento: number
+          id: string
+          nome: string
+          observacao: string | null
+          permite_parcelamento: boolean
+          taxa_percentual: number
+          tipo_recebimento: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          dias_recebimento?: number
+          id?: string
+          nome: string
+          observacao?: string | null
+          permite_parcelamento?: boolean
+          taxa_percentual?: number
+          tipo_recebimento?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          dias_recebimento?: number
+          id?: string
+          nome?: string
+          observacao?: string | null
+          permite_parcelamento?: boolean
+          taxa_percentual?: number
+          tipo_recebimento?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      planos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      salas: {
+        Row: {
+          ativo: boolean
+          cor_identificacao: string
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          observacao: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cor_identificacao?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          observacao?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cor_identificacao?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          observacao?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
