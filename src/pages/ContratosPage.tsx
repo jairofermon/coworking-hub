@@ -1,46 +1,59 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { FilterBar } from '@/components/FilterBar';
 import { StatusBadge } from '@/components/StatusBadge';
-import { mockContratos as initialContratos, mockClientes as initialClientes, mockSalas as initialSalas, mockPlanos as initialPlanos, mockFormasPagamento as initialFormas } from '@/data/mock';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Contrato } from '@/types';
+import { Contrato, Cliente, Sala, Plano, FormaPagamento } from '@/types';
 import { ContratoFormDialog } from '@/components/contratos/ContratoFormDialog';
 import { ContratoDeleteDialog } from '@/components/contratos/ContratoDeleteDialog';
+import { fetchContratos, upsertContrato, deleteContrato, fetchClientes, fetchSalas, fetchPlanos, fetchFormasPagamento } from '@/lib/api';
 
 export default function ContratosPage() {
-  const [contratos, setContratos] = useState<Contrato[]>(initialContratos);
+  const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [salas, setSalas] = useState<Sala[]>([]);
+  const [planos, setPlanos] = useState<Plano[]>([]);
+  const [formas, setFormas] = useState<FormaPagamento[]>([]);
   const [busca, setBusca] = useState('');
+  const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Contrato | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState<Contrato | null>(null);
 
+  async function loadData() {
+    try {
+      const [ct, cl, sl, pl, fp] = await Promise.all([fetchContratos(), fetchClientes(), fetchSalas(), fetchPlanos(), fetchFormasPagamento()]);
+      setContratos(ct); setClientes(cl); setSalas(sl); setPlanos(pl); setFormas(fp);
+    } catch (e: any) { toast.error('Erro: ' + e.message); } finally { setLoading(false); }
+  }
+
+  useEffect(() => { loadData(); }, []);
+
   const filtered = contratos.filter(ct => {
-    const cliente = initialClientes.find(c => c.id === ct.cliente_id);
+    const cliente = clientes.find(c => c.id === ct.cliente_id);
     return cliente?.nome_razao_social.toLowerCase().includes(busca.toLowerCase()) || ct.status.includes(busca.toLowerCase());
   });
 
-  function handleSave(contrato: Contrato) {
-    setContratos(prev => {
-      const idx = prev.findIndex(c => c.id === contrato.id);
-      if (idx >= 0) { const u = [...prev]; u[idx] = contrato; return u; }
-      return [...prev, contrato];
-    });
+  async function handleSave(contrato: Contrato) {
+    try { await upsertContrato(contrato); await loadData(); } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!deleting) return;
-    setContratos(prev => prev.filter(c => c.id !== deleting.id));
-    toast.success('Contrato excluído');
-    setDeleteOpen(false);
-    setDeleting(null);
+    try {
+      await deleteContrato(deleting.id);
+      toast.success('Contrato excluído');
+      setDeleteOpen(false); setDeleting(null); await loadData();
+    } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
+
+  if (loading) return <div className="page-container flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="page-container">
@@ -63,9 +76,9 @@ export default function ContratosPage() {
           <TableBody>
             {filtered.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-10">Nenhum contrato encontrado.</TableCell></TableRow>}
             {filtered.map((ct) => {
-              const cliente = initialClientes.find(c => c.id === ct.cliente_id);
-              const sala = initialSalas.find(s => s.id === ct.sala_id);
-              const plano = initialPlanos.find(p => p.id === ct.plano_id);
+              const cliente = clientes.find(c => c.id === ct.cliente_id);
+              const sala = salas.find(s => s.id === ct.sala_id);
+              const plano = planos.find(p => p.id === ct.plano_id);
               return (
                 <TableRow key={ct.id}>
                   <TableCell className="font-medium">{cliente?.nome_razao_social}</TableCell>
@@ -96,8 +109,7 @@ export default function ContratosPage() {
           </TableBody>
         </Table>
       </Card>
-
-      <ContratoFormDialog open={formOpen} onOpenChange={setFormOpen} contrato={editing} onSave={handleSave} clientes={initialClientes} salas={initialSalas} planos={initialPlanos} formasPagamento={initialFormas} />
+      <ContratoFormDialog open={formOpen} onOpenChange={setFormOpen} contrato={editing} onSave={handleSave} clientes={clientes} salas={salas} planos={planos} formasPagamento={formas} />
       <ContratoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
     </div>
   );

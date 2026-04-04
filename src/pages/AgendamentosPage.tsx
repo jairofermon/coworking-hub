@@ -1,47 +1,59 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { FilterBar } from '@/components/FilterBar';
 import { StatusBadge } from '@/components/StatusBadge';
-import { mockAgendamentos as initialAgendamentos, mockClientes, mockSalas, mockContratos } from '@/data/mock';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Agendamento } from '@/types';
+import { Agendamento, Cliente, Sala, Contrato } from '@/types';
 import { AgendamentoFormDialog } from '@/components/agendamentos/AgendamentoFormDialog';
 import { AgendamentoDeleteDialog } from '@/components/agendamentos/AgendamentoDeleteDialog';
+import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos } from '@/lib/api';
 
 export default function AgendamentosPage() {
-  const [agendamentos, setAgendamentos] = useState<Agendamento[]>(initialAgendamentos);
+  const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [salas, setSalas] = useState<Sala[]>([]);
+  const [contratos, setContratos] = useState<Contrato[]>([]);
   const [busca, setBusca] = useState('');
+  const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Agendamento | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState<Agendamento | null>(null);
 
+  async function loadData() {
+    try {
+      const [ag, cl, sl, ct] = await Promise.all([fetchAgendamentos(), fetchClientes(), fetchSalas(), fetchContratos()]);
+      setAgendamentos(ag); setClientes(cl); setSalas(sl); setContratos(ct);
+    } catch (e: any) { toast.error('Erro: ' + e.message); } finally { setLoading(false); }
+  }
+
+  useEffect(() => { loadData(); }, []);
+
   const filtered = agendamentos.filter(ag => {
-    const cliente = mockClientes.find(c => c.id === ag.cliente_id);
-    const sala = mockSalas.find(s => s.id === ag.sala_id);
+    const cliente = clientes.find(c => c.id === ag.cliente_id);
+    const sala = salas.find(s => s.id === ag.sala_id);
     return cliente?.nome_razao_social.toLowerCase().includes(busca.toLowerCase()) || sala?.nome.toLowerCase().includes(busca.toLowerCase()) || ag.data.includes(busca);
   });
 
-  function handleSave(ag: Agendamento) {
-    setAgendamentos(prev => {
-      const idx = prev.findIndex(a => a.id === ag.id);
-      if (idx >= 0) { const u = [...prev]; u[idx] = ag; return u; }
-      return [...prev, ag];
-    });
+  async function handleSave(ag: Agendamento) {
+    try { await upsertAgendamento(ag); await loadData(); } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!deleting) return;
-    setAgendamentos(prev => prev.filter(a => a.id !== deleting.id));
-    toast.success('Agendamento excluído');
-    setDeleteOpen(false);
-    setDeleting(null);
+    try {
+      await deleteAgendamento(deleting.id);
+      toast.success('Agendamento excluído');
+      setDeleteOpen(false); setDeleting(null); await loadData();
+    } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
+
+  if (loading) return <div className="page-container flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
 
   return (
     <div className="page-container">
@@ -63,8 +75,8 @@ export default function AgendamentosPage() {
           <TableBody>
             {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-10">Nenhum agendamento encontrado.</TableCell></TableRow>}
             {filtered.map((ag) => {
-              const cliente = mockClientes.find(c => c.id === ag.cliente_id);
-              const sala = mockSalas.find(s => s.id === ag.sala_id);
+              const cliente = clientes.find(c => c.id === ag.cliente_id);
+              const sala = salas.find(s => s.id === ag.sala_id);
               return (
                 <TableRow key={ag.id}>
                   <TableCell className="font-medium">{new Date(ag.data).toLocaleDateString('pt-BR')}</TableCell>
@@ -94,8 +106,7 @@ export default function AgendamentosPage() {
           </TableBody>
         </Table>
       </Card>
-
-      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={mockClientes} salas={mockSalas} contratos={mockContratos} />
+      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientes} salas={salas} contratos={contratos} />
       <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
     </div>
   );
