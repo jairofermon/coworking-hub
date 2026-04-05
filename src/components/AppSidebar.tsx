@@ -29,6 +29,7 @@ const mainItems = [
   { title: 'Clientes', url: '/clientes', icon: Users },
   { title: 'Contratos', url: '/contratos', icon: FileText },
   { title: 'Agendamentos', url: '/agendamentos', icon: CalendarDays },
+  { title: 'Calendário', url: '/calendario', icon: CalendarRange },
 ];
 
 const configItems = [
