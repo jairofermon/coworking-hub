@@ -1,21 +1,46 @@
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/PageHeader';
-import { mockSalas, mockClientes, mockContratos, mockAgendamentos } from '@/data/mock';
-import { DoorOpen, Users, FileText, CalendarDays, TrendingUp, AlertCircle } from 'lucide-react';
 import { StatusBadge } from '@/components/StatusBadge';
-
-const stats = [
-  { label: 'Salas Ativas', value: mockSalas.filter(s => s.ativo).length, total: mockSalas.length, icon: DoorOpen, color: 'text-primary' },
-  { label: 'Clientes', value: mockClientes.length, icon: Users, color: 'text-primary' },
-  { label: 'Contratos Ativos', value: mockContratos.filter(c => c.status === 'ativo').length, icon: FileText, color: 'text-success' },
-  { label: 'Agendamentos Hoje', value: mockAgendamentos.filter(a => a.data === '2024-04-03').length, icon: CalendarDays, color: 'text-warning' },
-];
+import { DoorOpen, Users, FileText, CalendarDays, TrendingUp, AlertCircle, Loader2 } from 'lucide-react';
+import { fetchSalas, fetchClientes, fetchContratos, fetchAgendamentos, inactivateExpiredContracts } from '@/lib/api';
+import { Sala, Cliente, Contrato, Agendamento } from '@/types';
 
 export default function DashboardPage() {
+  const [salas, setSalas] = useState<Sala[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        await inactivateExpiredContracts().catch(() => {});
+        const [s, c, ct, ag] = await Promise.all([fetchSalas(), fetchClientes(), fetchContratos(), fetchAgendamentos()]);
+        setSalas(s); setClientes(c); setContratos(ct); setAgendamentos(ag);
+      } catch {} finally { setLoading(false); }
+    }
+    load();
+  }, []);
+
+  if (loading) return <div className="page-container flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+
+  const today = new Date().toISOString().split('T')[0];
+  const agendamentosHoje = agendamentos.filter(a => a.data === today);
+  const contratosAtivos = contratos.filter(c => c.status === 'ativo');
+  const proximosAgendamentos = agendamentos.filter(a => a.data >= today && a.status !== 'cancelado').slice(0, 5);
+
+  const stats = [
+    { label: 'Salas Ativas', value: salas.filter(s => s.ativo).length, total: salas.length, icon: DoorOpen, color: 'text-primary' },
+    { label: 'Clientes', value: clientes.length, icon: Users, color: 'text-primary' },
+    { label: 'Contratos Ativos', value: contratosAtivos.length, icon: FileText, color: 'text-green-600' },
+    { label: 'Agendamentos Hoje', value: agendamentosHoje.length, icon: CalendarDays, color: 'text-amber-600' },
+  ];
+
   return (
     <div className="page-container">
       <PageHeader titulo="Dashboard" subtitulo="Visão geral do CM Coworking" />
-
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.label}>
@@ -26,35 +51,29 @@ export default function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold">
                 {stat.value}
-                {stat.total !== undefined && (
-                  <span className="text-sm font-normal text-muted-foreground">/{stat.total}</span>
-                )}
+                {stat.total !== undefined && <span className="text-sm font-normal text-muted-foreground">/{stat.total}</span>}
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
-
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Próximos agendamentos */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CalendarDays className="h-4 w-4" />
-              Próximos Agendamentos
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base"><CalendarDays className="h-4 w-4" />Próximos Agendamentos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {mockAgendamentos.map((ag) => {
-              const cliente = mockClientes.find(c => c.id === ag.cliente_id);
-              const sala = mockSalas.find(s => s.id === ag.sala_id);
+            {proximosAgendamentos.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhum agendamento próximo.</p>}
+            {proximosAgendamentos.map((ag) => {
+              const cliente = clientes.find(c => c.id === ag.cliente_id);
+              const sala = salas.find(s => s.id === ag.sala_id);
               return (
                 <div key={ag.id} className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-3">
                     <div className="h-2 w-2 rounded-full" style={{ backgroundColor: sala?.cor_identificacao }} />
                     <div>
                       <p className="text-sm font-medium">{cliente?.nome_razao_social}</p>
-                      <p className="text-xs text-muted-foreground">{sala?.nome} · {ag.hora_inicio} - {ag.hora_fim}</p>
+                      <p className="text-xs text-muted-foreground">{sala?.nome} · {new Date(ag.data + 'T00:00:00').toLocaleDateString('pt-BR')} · {ag.hora_inicio} - {ag.hora_fim}</p>
                     </div>
                   </div>
                   <StatusBadge status={ag.status} />
@@ -63,37 +82,22 @@ export default function DashboardPage() {
             })}
           </CardContent>
         </Card>
-
-        {/* Resumo rápido */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <TrendingUp className="h-4 w-4" />
-              Resumo Financeiro
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4" />Resumo Financeiro</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Receita Bruta (contratos ativos)</span>
-              <span className="font-semibold">
-                R$ {mockContratos.filter(c => c.status === 'ativo').reduce((acc, c) => acc + c.valor_total, 0).toLocaleString('pt-BR')}
-              </span>
+              <span className="font-semibold">R$ {contratosAtivos.reduce((acc, c) => acc + c.valor_total, 0).toLocaleString('pt-BR')}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Receita Líquida</span>
-              <span className="font-semibold">
-                R$ {mockContratos.filter(c => c.status === 'ativo').reduce((acc, c) => acc + c.valor_liquido, 0).toLocaleString('pt-BR')}
-              </span>
+              <span className="font-semibold">R$ {contratosAtivos.reduce((acc, c) => acc + c.valor_liquido, 0).toLocaleString('pt-BR')}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Total em Taxas</span>
-              <span className="font-semibold text-destructive">
-                - R$ {mockContratos.filter(c => c.status === 'ativo').reduce((acc, c) => acc + c.valor_taxa, 0).toLocaleString('pt-BR')}
-              </span>
-            </div>
-            <div className="mt-2 flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 p-3">
-              <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
-              <p className="text-xs text-muted-foreground">Os valores são baseados nos contratos ativos. Implemente o backend para dados em tempo real.</p>
+              <span className="font-semibold text-destructive">- R$ {contratosAtivos.reduce((acc, c) => acc + c.valor_taxa, 0).toLocaleString('pt-BR')}</span>
             </div>
           </CardContent>
         </Card>

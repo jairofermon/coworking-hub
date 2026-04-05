@@ -12,6 +12,7 @@ import { Agendamento, Cliente, Sala, Contrato } from '@/types';
 import { AgendamentoFormDialog } from '@/components/agendamentos/AgendamentoFormDialog';
 import { AgendamentoDeleteDialog } from '@/components/agendamentos/AgendamentoDeleteDialog';
 import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos } from '@/lib/api';
+import { Separator } from '@/components/ui/separator';
 
 export default function AgendamentosPage() {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
@@ -40,6 +41,17 @@ export default function AgendamentosPage() {
     return cliente?.nome_razao_social.toLowerCase().includes(busca.toLowerCase()) || sala?.nome.toLowerCase().includes(busca.toLowerCase()) || ag.data.includes(busca);
   });
 
+  const today = new Date().toISOString().split('T')[0];
+  const now = new Date().toTimeString().slice(0, 5);
+
+  const futuros = filtered
+    .filter(ag => ag.data > today || (ag.data === today && ag.hora_fim >= now))
+    .sort((a, b) => a.data.localeCompare(b.data) || a.hora_inicio.localeCompare(b.hora_inicio));
+
+  const passados = filtered
+    .filter(ag => ag.data < today || (ag.data === today && ag.hora_fim < now))
+    .sort((a, b) => b.data.localeCompare(a.data) || b.hora_inicio.localeCompare(a.hora_inicio));
+
   async function handleSave(ag: Agendamento) {
     try { await upsertAgendamento(ag); await loadData(); } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
@@ -55,57 +67,83 @@ export default function AgendamentosPage() {
 
   if (loading) return <div className="page-container flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
 
+  function renderRow(ag: Agendamento) {
+    const cliente = clientes.find(c => c.id === ag.cliente_id);
+    const sala = salas.find(s => s.id === ag.sala_id);
+    return (
+      <TableRow key={ag.id}>
+        <TableCell className="font-medium">{new Date(ag.data + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
+        <TableCell>
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: sala?.cor_identificacao }} />
+            {sala?.nome}
+          </div>
+        </TableCell>
+        <TableCell>{cliente?.nome_razao_social}</TableCell>
+        <TableCell className="text-muted-foreground">{ag.hora_inicio} - {ag.hora_fim}</TableCell>
+        <TableCell><StatusBadge status={ag.status} /></TableCell>
+        <TableCell className="text-muted-foreground text-sm">{ag.observacao || '—'}</TableCell>
+        <TableCell>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ag); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TableCell>
+      </TableRow>
+    );
+  }
+
+  const tableHeader = (
+    <TableHeader>
+      <TableRow>
+        <TableHead>Data</TableHead>
+        <TableHead>Sala</TableHead>
+        <TableHead>Cliente</TableHead>
+        <TableHead>Horário</TableHead>
+        <TableHead>Status</TableHead>
+        <TableHead>Observação</TableHead>
+        <TableHead className="w-12" />
+      </TableRow>
+    </TableHeader>
+  );
+
   return (
     <div className="page-container">
       <PageHeader titulo="Agendamentos" subtitulo="Gerencie reservas e horários das salas" acaoPrincipal={{ label: 'Novo Agendamento', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } }} />
       <FilterBar placeholder="Buscar por cliente, sala ou data..." value={busca} onChange={setBusca} />
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Data</TableHead>
-              <TableHead>Sala</TableHead>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Horário</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Observação</TableHead>
-              <TableHead className="w-12" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-10">Nenhum agendamento encontrado.</TableCell></TableRow>}
-            {filtered.map((ag) => {
-              const cliente = clientes.find(c => c.id === ag.cliente_id);
-              const sala = salas.find(s => s.id === ag.sala_id);
-              return (
-                <TableRow key={ag.id}>
-                  <TableCell className="font-medium">{new Date(ag.data).toLocaleDateString('pt-BR')}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: sala?.cor_identificacao }} />
-                      {sala?.nome}
-                    </div>
-                  </TableCell>
-                  <TableCell>{cliente?.nome_razao_social}</TableCell>
-                  <TableCell className="text-muted-foreground">{ag.hora_inicio} - {ag.hora_fim}</TableCell>
-                  <TableCell><StatusBadge status={ag.status} /></TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{ag.observacao || '—'}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ag); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </Card>
+
+      <div className="space-y-1">
+        <h3 className="text-sm font-semibold text-foreground">Próximos agendamentos</h3>
+        <Card>
+          <Table>
+            {tableHeader}
+            <TableBody>
+              {futuros.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Nenhum agendamento futuro.</TableCell></TableRow>}
+              {futuros.map(renderRow)}
+            </TableBody>
+          </Table>
+        </Card>
+      </div>
+
+      {passados.length > 0 && (
+        <div className="space-y-1 mt-6">
+          <Separator className="mb-4" />
+          <h3 className="text-sm font-semibold text-muted-foreground">Agendamentos passados</h3>
+          <Card>
+            <Table>
+              {tableHeader}
+              <TableBody>
+                {passados.map(renderRow)}
+              </TableBody>
+            </Table>
+          </Card>
+        </div>
+      )}
+
       <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientes} salas={salas} contratos={contratos} />
       <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
     </div>

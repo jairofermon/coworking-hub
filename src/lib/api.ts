@@ -113,19 +113,19 @@ export async function deleteCliente(id: string) {
 export async function fetchPlanos(): Promise<Plano[]> {
   const { data, error } = await supabase.from('planos').select('*').order('nome');
   if (error) throw error;
-  return (data ?? []).map(r => ({ id: r.id, nome: r.nome, descricao: r.descricao ?? '', ativo: r.ativo }));
+  return (data ?? []).map(r => ({ id: r.id, nome: r.nome, descricao: r.descricao ?? '', valor_previsto: Number((r as any).valor_previsto ?? 0), ativo: r.ativo }));
 }
 
 export async function upsertPlano(p: Omit<Plano, 'id'> & { id?: string }): Promise<Plano> {
-  const payload = { nome: p.nome, descricao: p.descricao, ativo: p.ativo };
+  const payload = { nome: p.nome, descricao: p.descricao, valor_previsto: p.valor_previsto, ativo: p.ativo } as any;
   if (p.id) {
     const { data, error } = await supabase.from('planos').update(payload).eq('id', p.id).select().single();
     if (error) throw error;
-    return { id: data.id, nome: data.nome, descricao: data.descricao ?? '', ativo: data.ativo };
+    return { id: data.id, nome: data.nome, descricao: data.descricao ?? '', valor_previsto: Number((data as any).valor_previsto ?? 0), ativo: data.ativo };
   }
   const { data, error } = await supabase.from('planos').insert(payload).select().single();
   if (error) throw error;
-  return { id: data.id, nome: data.nome, descricao: data.descricao ?? '', ativo: data.ativo };
+  return { id: data.id, nome: data.nome, descricao: data.descricao ?? '', valor_previsto: Number((data as any).valor_previsto ?? 0), ativo: data.ativo };
 }
 
 export async function deletePlano(id: string) {
@@ -180,7 +180,7 @@ export async function fetchContratos(): Promise<Contrato[]> {
   const { data, error } = await supabase.from('contratos').select('*').order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map(r => ({
-    id: r.id, cliente_id: r.cliente_id, sala_id: r.sala_id, plano_id: r.plano_id,
+    id: r.id, codigo: (r as any).codigo ?? '', cliente_id: r.cliente_id, sala_id: r.sala_id, plano_id: r.plano_id,
     forma_pagamento_id: r.forma_pagamento_id, valor_total: Number(r.valor_total),
     desconta_taxa: r.desconta_taxa, valor_taxa: Number(r.valor_taxa),
     valor_liquido: Number(r.valor_liquido), data_inicio: r.data_inicio, data_fim: r.data_fim,
@@ -188,7 +188,7 @@ export async function fetchContratos(): Promise<Contrato[]> {
   }));
 }
 
-export async function upsertContrato(c: Omit<Contrato, 'id'> & { id?: string }): Promise<Contrato> {
+export async function upsertContrato(c: Omit<Contrato, 'id' | 'codigo'> & { id?: string }): Promise<Contrato> {
   const payload = {
     cliente_id: c.cliente_id, sala_id: c.sala_id, plano_id: c.plano_id,
     forma_pagamento_id: c.forma_pagamento_id, valor_total: c.valor_total,
@@ -207,7 +207,7 @@ export async function upsertContrato(c: Omit<Contrato, 'id'> & { id?: string }):
 
 function mapContrato(r: any): Contrato {
   return {
-    id: r.id, cliente_id: r.cliente_id, sala_id: r.sala_id, plano_id: r.plano_id,
+    id: r.id, codigo: r.codigo ?? '', cliente_id: r.cliente_id, sala_id: r.sala_id, plano_id: r.plano_id,
     forma_pagamento_id: r.forma_pagamento_id, valor_total: Number(r.valor_total),
     desconta_taxa: r.desconta_taxa, valor_taxa: Number(r.valor_taxa),
     valor_liquido: Number(r.valor_liquido), data_inicio: r.data_inicio, data_fim: r.data_fim,
@@ -223,7 +223,7 @@ export async function deleteContrato(id: string) {
 // ── Agendamentos ──
 
 export async function fetchAgendamentos(): Promise<Agendamento[]> {
-  const { data, error } = await supabase.from('agendamentos').select('*').order('data', { ascending: false });
+  const { data, error } = await supabase.from('agendamentos').select('*').order('data').order('hora_inicio');
   if (error) throw error;
   return (data ?? []).map(r => ({
     id: r.id, sala_id: r.sala_id, cliente_id: r.cliente_id,
@@ -258,5 +258,12 @@ function mapAgendamento(r: any): Agendamento {
 
 export async function deleteAgendamento(id: string) {
   const { error } = await supabase.from('agendamentos').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ── Inativar contratos expirados (client-side fallback) ──
+export async function inactivateExpiredContracts() {
+  const today = new Date().toISOString().split('T')[0];
+  const { error } = await supabase.from('contratos').update({ status: 'encerrado' }).eq('status', 'ativo').lt('data_fim', today);
   if (error) throw error;
 }

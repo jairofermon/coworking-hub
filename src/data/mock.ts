@@ -20,10 +20,10 @@ export const mockClientes: Cliente[] = [
 ];
 
 export const mockPlanos: Plano[] = [
-  { id: '1', nome: 'Avulso', descricao: 'Uso por hora avulsa', ativo: true },
-  { id: '2', nome: 'Mensal 20h', descricao: '20 horas mensais', ativo: true },
-  { id: '3', nome: 'Mensal 40h', descricao: '40 horas mensais', ativo: true },
-  { id: '4', nome: 'Integral', descricao: 'Uso integral do espaço', ativo: false },
+  { id: '1', nome: 'Avulso', descricao: 'Uso por hora avulsa', valor_previsto: 80, ativo: true },
+  { id: '2', nome: 'Mensal 20h', descricao: '20 horas mensais', valor_previsto: 1200, ativo: true },
+  { id: '3', nome: 'Mensal 40h', descricao: '40 horas mensais', valor_previsto: 2000, ativo: true },
+  { id: '4', nome: 'Integral', descricao: 'Uso integral do espaço', valor_previsto: 3500, ativo: false },
 ];
 
 export const mockFormasPagamento: FormaPagamento[] = [
@@ -33,8 +33,8 @@ export const mockFormasPagamento: FormaPagamento[] = [
 ];
 
 export const mockContratos: Contrato[] = [
-  { id: '1', cliente_id: '1', sala_id: '1', plano_id: '2', forma_pagamento_id: '1', valor_total: 1200, desconta_taxa: false, valor_taxa: 0, valor_liquido: 1200, data_inicio: '2024-03-01', data_fim: '2025-02-28', status: 'ativo', observacao: '' },
-  { id: '2', cliente_id: '2', sala_id: '2', plano_id: '3', forma_pagamento_id: '2', valor_total: 2000, desconta_taxa: true, valor_taxa: 70, valor_liquido: 1930, data_inicio: '2024-04-01', data_fim: '2025-03-31', status: 'ativo', observacao: '' },
+  { id: '1', codigo: 'CT-0001', cliente_id: '1', sala_id: '1', plano_id: '2', forma_pagamento_id: '1', valor_total: 1200, desconta_taxa: false, valor_taxa: 0, valor_liquido: 1200, data_inicio: '2024-03-01', data_fim: '2025-02-28', status: 'ativo', observacao: '' },
+  { id: '2', codigo: 'CT-0002', cliente_id: '2', sala_id: '2', plano_id: '3', forma_pagamento_id: '2', valor_total: 2000, desconta_taxa: true, valor_taxa: 70, valor_liquido: 1930, data_inicio: '2024-04-01', data_fim: '2025-03-31', status: 'ativo', observacao: '' },
 ];
 
 export const mockAgendamentos: Agendamento[] = [

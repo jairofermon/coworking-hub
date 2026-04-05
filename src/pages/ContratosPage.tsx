@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { Contrato, Cliente, Sala, Plano, FormaPagamento } from '@/types';
 import { ContratoFormDialog } from '@/components/contratos/ContratoFormDialog';
 import { ContratoDeleteDialog } from '@/components/contratos/ContratoDeleteDialog';
-import { fetchContratos, upsertContrato, deleteContrato, fetchClientes, fetchSalas, fetchPlanos, fetchFormasPagamento } from '@/lib/api';
+import { fetchContratos, upsertContrato, deleteContrato, fetchClientes, fetchSalas, fetchPlanos, fetchFormasPagamento, inactivateExpiredContracts } from '@/lib/api';
 
 export default function ContratosPage() {
   const [contratos, setContratos] = useState<Contrato[]>([]);
@@ -28,6 +28,7 @@ export default function ContratosPage() {
 
   async function loadData() {
     try {
+      await inactivateExpiredContracts().catch(() => {});
       const [ct, cl, sl, pl, fp] = await Promise.all([fetchContratos(), fetchClientes(), fetchSalas(), fetchPlanos(), fetchFormasPagamento()]);
       setContratos(ct); setClientes(cl); setSalas(sl); setPlanos(pl); setFormas(fp);
     } catch (e: any) { toast.error('Erro: ' + e.message); } finally { setLoading(false); }
@@ -37,7 +38,7 @@ export default function ContratosPage() {
 
   const filtered = contratos.filter(ct => {
     const cliente = clientes.find(c => c.id === ct.cliente_id);
-    return cliente?.nome_razao_social.toLowerCase().includes(busca.toLowerCase()) || ct.status.includes(busca.toLowerCase());
+    return cliente?.nome_razao_social.toLowerCase().includes(busca.toLowerCase()) || ct.status.includes(busca.toLowerCase()) || ct.codigo?.toLowerCase().includes(busca.toLowerCase());
   });
 
   async function handleSave(contrato: Contrato) {
@@ -58,11 +59,12 @@ export default function ContratosPage() {
   return (
     <div className="page-container">
       <PageHeader titulo="Contratos" subtitulo="Controle de contratos de locação" acaoPrincipal={{ label: 'Novo Contrato', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } }} />
-      <FilterBar placeholder="Buscar por cliente ou status..." value={busca} onChange={setBusca} />
+      <FilterBar placeholder="Buscar por cliente, código ou status..." value={busca} onChange={setBusca} />
       <Card>
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Código</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>Sala</TableHead>
               <TableHead>Plano</TableHead>
@@ -74,13 +76,14 @@ export default function ContratosPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-10">Nenhum contrato encontrado.</TableCell></TableRow>}
+            {filtered.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-10">Nenhum contrato encontrado.</TableCell></TableRow>}
             {filtered.map((ct) => {
               const cliente = clientes.find(c => c.id === ct.cliente_id);
               const sala = salas.find(s => s.id === ct.sala_id);
               const plano = planos.find(p => p.id === ct.plano_id);
               return (
                 <TableRow key={ct.id}>
+                  <TableCell className="font-mono text-xs font-medium">{ct.codigo}</TableCell>
                   <TableCell className="font-medium">{cliente?.nome_razao_social}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -91,7 +94,7 @@ export default function ContratosPage() {
                   <TableCell>{plano?.nome}</TableCell>
                   <TableCell>R$ {ct.valor_total.toLocaleString('pt-BR')}</TableCell>
                   <TableCell>R$ {ct.valor_liquido.toLocaleString('pt-BR')}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{new Date(ct.data_inicio).toLocaleDateString('pt-BR')} — {new Date(ct.data_fim).toLocaleDateString('pt-BR')}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{new Date(ct.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')} — {new Date(ct.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell><StatusBadge status={ct.status} /></TableCell>
                   <TableCell>
                     <DropdownMenu>

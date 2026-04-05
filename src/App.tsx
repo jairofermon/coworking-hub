@@ -9,6 +9,7 @@ import SalasPage from "./pages/SalasPage";
 import ClientesPage from "./pages/ClientesPage";
 import ContratosPage from "./pages/ContratosPage";
 import AgendamentosPage from "./pages/AgendamentosPage";
+import CalendarioPage from "./pages/CalendarioPage";
 import PlanosPage from "./pages/PlanosPage";
 import FormasPagamentoPage from "./pages/FormasPagamentoPage";
 import NotFound from "./pages/NotFound";
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/clientes" element={<ClientesPage />} />
             <Route path="/contratos" element={<ContratosPage />} />
             <Route path="/agendamentos" element={<AgendamentosPage />} />
+            <Route path="/calendario" element={<CalendarioPage />} />
             <Route path="/configuracoes/planos" element={<PlanosPage />} />
             <Route path="/configuracoes/formas-pagamento" element={<FormasPagamentoPage />} />
           </Route>

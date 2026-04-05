@@ -55,16 +55,18 @@ export default function PlanosPage() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
+              <TableHead>Valor Previsto</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-10">Nenhum plano encontrado.</TableCell></TableRow>}
+            {filtered.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-10">Nenhum plano encontrado.</TableCell></TableRow>}
             {filtered.map((p) => (
               <TableRow key={p.id}>
                 <TableCell className="font-medium">{p.nome}</TableCell>
                 <TableCell className="text-muted-foreground">{p.descricao}</TableCell>
+                <TableCell>R$ {p.valor_previsto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
                 <TableCell><StatusBadge status={p.ativo} /></TableCell>
                 <TableCell>
                   <DropdownMenu>
