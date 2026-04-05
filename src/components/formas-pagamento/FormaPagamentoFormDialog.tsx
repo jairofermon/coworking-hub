@@ -30,7 +30,7 @@ export function FormaPagamentoFormDialog({ open, onOpenChange, forma, onSave }: 
 
   function handleSave() {
     if (!form.nome.trim()) { setErrors({ nome: 'Nome é obrigatório' }); return; }
-    onSave({ id: forma?.id || crypto.randomUUID(), ...form });
+    onSave({ ...(forma?.id ? { id: forma.id } : {}), ...form } as any);
     toast.success(isEdit ? 'Forma de pagamento atualizada!' : 'Forma de pagamento criada!');
     onOpenChange(false);
   }

@@ -49,8 +49,8 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSave }: Props
   function handleSave() {
     if (!validate()) return;
     const now = new Date().toISOString();
-    const saved: Cliente = {
-      id: cliente?.id || crypto.randomUUID(),
+    const saved: any = {
+      ...(cliente?.id ? { id: cliente.id } : {}),
       ...form,
       created_at: cliente?.created_at || now,
       updated_at: now,

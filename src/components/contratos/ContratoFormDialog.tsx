@@ -60,9 +60,9 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
     if (Object.keys(e).length > 0) return;
 
     onSave({
-      id: contrato?.id || crypto.randomUUID(),
+      ...(contrato?.id ? { id: contrato.id } : {}),
       ...form, valor_taxa, valor_liquido,
-    });
+    } as any);
     toast.success(isEdit ? 'Contrato atualizado!' : 'Contrato criado!');
     onOpenChange(false);
   }
