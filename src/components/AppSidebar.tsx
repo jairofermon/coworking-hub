@@ -4,6 +4,7 @@ import {
   Users,
   FileText,
   CalendarDays,
+  CalendarRange,
   Settings,
   CreditCard,
   ListChecks,
