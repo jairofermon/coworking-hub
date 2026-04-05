@@ -55,12 +55,7 @@ export default function SalasPage() {
   );
 
   async function handleSaveSala(sala: Sala) {
-    try {
-      await upsertSala(sala);
-      await loadData();
-    } catch (e: any) {
-      toast.error('Erro ao salvar sala: ' + e.message);
-    }
+    try { await upsertSala(sala); await loadData(); } catch (e: any) { toast.error('Erro ao salvar sala: ' + e.message); }
   }
 
   async function handleDelete() {
@@ -68,12 +63,8 @@ export default function SalasPage() {
     try {
       await deleteSala(deletingSala.id);
       toast.success(`Sala "${deletingSala.nome}" excluída`);
-      setDeleteOpen(false);
-      setDeletingSala(null);
-      await loadData();
-    } catch (e: any) {
-      toast.error('Erro ao excluir: ' + e.message);
-    }
+      setDeleteOpen(false); setDeletingSala(null); await loadData();
+    } catch (e: any) { toast.error('Erro ao excluir: ' + e.message); }
   }
 
   async function handleToggleAtivo(sala: Sala) {
@@ -81,27 +72,15 @@ export default function SalasPage() {
       await toggleSalaAtivo(sala.id, !sala.ativo);
       toast.success(sala.ativo ? `"${sala.nome}" desativada` : `"${sala.nome}" ativada`);
       await loadData();
-    } catch (e: any) {
-      toast.error('Erro: ' + e.message);
-    }
+    } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
 
   async function handleSaveDisponibilidade(salaId: string, disps: DisponibilidadeSala[]) {
-    try {
-      await saveDisponibilidades(salaId, disps);
-      await loadData();
-    } catch (e: any) {
-      toast.error('Erro ao salvar disponibilidade: ' + e.message);
-    }
+    try { await saveDisponibilidades(salaId, disps); await loadData(); } catch (e: any) { toast.error('Erro ao salvar disponibilidade: ' + e.message); }
   }
 
-  function getDiasDisponiveis(salaId: string) {
-    const disps = disponibilidades.filter(d => d.sala_id === salaId && d.ativo);
-    const dias = [...new Set(disps.map(d => d.dia_semana))].sort((a, b) => {
-      const order = [1, 2, 3, 4, 5, 6, 0];
-      return order.indexOf(a) - order.indexOf(b);
-    });
-    return dias;
+  function getDispsForSala(salaId: string) {
+    return disponibilidades.filter(d => d.sala_id === salaId && d.ativo);
   }
 
   if (loading) {
@@ -130,7 +109,10 @@ export default function SalasPage() {
               <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-10">{busca ? 'Nenhuma sala encontrada para esta busca.' : 'Nenhuma sala cadastrada.'}</TableCell></TableRow>
             )}
             {salasFiltradas.map((sala) => {
-              const dias = getDiasDisponiveis(sala.id);
+              const disps = getDispsForSala(sala.id);
+              const diasOrdem = [1, 2, 3, 4, 5, 6, 0];
+              const diasUnicos = [...new Set(disps.map(d => d.dia_semana))].sort((a, b) => diasOrdem.indexOf(a) - diasOrdem.indexOf(b));
+
               return (
                 <TableRow key={sala.id}>
                   <TableCell><div className="h-4 w-4 rounded-full ring-1 ring-border" style={{ backgroundColor: sala.cor_identificacao }} /></TableCell>
@@ -138,8 +120,22 @@ export default function SalasPage() {
                   <TableCell className="text-muted-foreground">{sala.descricao || '—'}</TableCell>
                   <TableCell><StatusBadge status={sala.ativo} /></TableCell>
                   <TableCell>
-                    {dias.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">{dias.map(d => <Badge key={d} variant="secondary" className="text-xs font-normal">{DIAS_SEMANA_SHORT[d]}</Badge>)}</div>
+                    {diasUnicos.length > 0 ? (
+                      <div className="space-y-0.5">
+                        {diasUnicos.map(dia => {
+                          const intervals = disps.filter(d => d.dia_semana === dia).sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+                          return (
+                            <div key={dia} className="flex items-center gap-1.5 text-xs">
+                              <span className="font-medium w-8">{DIAS_SEMANA_SHORT[dia]}</span>
+                              {intervals.map((i, idx) => (
+                                <Badge key={idx} variant="secondary" className="text-[10px] font-mono px-1 py-0">
+                                  {i.hora_inicio}-{i.hora_fim}
+                                </Badge>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
                     ) : <span className="text-xs text-muted-foreground">Não configurada</span>}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">{sala.observacao || '—'}</TableCell>

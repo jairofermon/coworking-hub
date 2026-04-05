@@ -36,6 +36,7 @@ export interface Plano {
   id: string;
   nome: string;
   descricao: string;
+  valor_previsto: number;
   ativo: boolean;
 }
 
@@ -52,6 +53,7 @@ export interface FormaPagamento {
 
 export interface Contrato {
   id: string;
+  codigo: string;
   cliente_id: string;
   sala_id: string;
   plano_id: string;
