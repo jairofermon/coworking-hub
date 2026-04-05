@@ -52,7 +52,7 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
     setErrors(e);
     if (Object.keys(e).length > 0) return;
 
-    onSave({ id: agendamento?.id || crypto.randomUUID(), ...form });
+    onSave({ ...(agendamento?.id ? { id: agendamento.id } : {}), ...form } as any);
     toast.success(isEdit ? 'Agendamento atualizado!' : 'Agendamento criado!');
     onOpenChange(false);
   }

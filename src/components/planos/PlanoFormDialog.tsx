@@ -27,7 +27,7 @@ export function PlanoFormDialog({ open, onOpenChange, plano, onSave }: Props) {
 
   function handleSave() {
     if (!form.nome.trim()) { setErrors({ nome: 'Nome é obrigatório' }); return; }
-    onSave({ id: plano?.id || crypto.randomUUID(), ...form });
+    onSave({ ...(plano?.id ? { id: plano.id } : {}), ...form } as any);
     toast.success(isEdit ? 'Plano atualizado!' : 'Plano criado!');
     onOpenChange(false);
   }

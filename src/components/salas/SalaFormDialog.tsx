@@ -56,8 +56,8 @@ export function SalaFormDialog({ open, onOpenChange, sala, onSave }: SalaFormDia
 
   function handleSave() {
     if (!validate()) return;
-    const saved: Sala = {
-      id: sala?.id || crypto.randomUUID(),
+    const saved: any = {
+      ...(sala?.id ? { id: sala.id } : {}),
       ...form,
       nome: form.nome.trim(),
       descricao: form.descricao.trim(),
