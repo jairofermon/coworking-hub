@@ -12,6 +12,7 @@ import { FormaPagamento } from '@/types';
 import { FormaPagamentoFormDialog } from '@/components/formas-pagamento/FormaPagamentoFormDialog';
 import { FormaPagamentoDeleteDialog } from '@/components/formas-pagamento/FormaPagamentoDeleteDialog';
 import { fetchFormasPagamento, upsertFormaPagamento, deleteFormaPagamento } from '@/lib/api';
+import { logAudit } from '@/lib/audit';
 
 export default function FormasPagamentoPage() {
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
