@@ -77,6 +77,7 @@ export default function SalasPage() {
   async function handleToggleAtivo(sala: Sala) {
     try {
       await toggleSalaAtivo(sala.id, !sala.ativo);
+      await logAudit(sala.ativo ? 'desativar' : 'ativar', 'sala', sala.id, { nome: sala.nome });
       toast.success(sala.ativo ? `"${sala.nome}" desativada` : `"${sala.nome}" ativada`);
       await loadData();
     } catch (e: any) { toast.error('Erro: ' + e.message); }

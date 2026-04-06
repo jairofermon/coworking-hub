@@ -44,6 +44,7 @@ export default function PlanosPage() {
     if (!deleting) return;
     try {
       await deletePlano(deleting.id);
+      await logAudit('excluir', 'plano', deleting.id, { nome: deleting.nome });
       toast.success(`Plano "${deleting.nome}" excluído`);
       setDeleteOpen(false); setDeleting(null); await loadData();
     } catch (e: any) { toast.error('Erro: ' + e.message); }

@@ -66,6 +66,7 @@ export default function AgendamentosPage() {
     if (!deleting) return;
     try {
       await deleteAgendamento(deleting.id);
+      await logAudit('excluir', 'agendamento', deleting.id, { data: deleting.data });
       toast.success('Agendamento excluído');
       setDeleteOpen(false); setDeleting(null); await loadData();
     } catch (e: any) { toast.error('Erro: ' + e.message); }

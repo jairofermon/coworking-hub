@@ -55,6 +55,7 @@ export default function ContratosPage() {
     if (!deleting) return;
     try {
       await deleteContrato(deleting.id);
+      await logAudit('excluir', 'contrato', deleting.id, { codigo: deleting.codigo });
       toast.success('Contrato excluído');
       setDeleteOpen(false); setDeleting(null); await loadData();
     } catch (e: any) { toast.error('Erro: ' + e.message); }

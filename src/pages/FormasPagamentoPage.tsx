@@ -44,6 +44,7 @@ export default function FormasPagamentoPage() {
     if (!deleting) return;
     try {
       await deleteFormaPagamento(deleting.id);
+      await logAudit('excluir', 'forma_pagamento', deleting.id, { nome: deleting.nome });
       toast.success(`"${deleting.nome}" excluída`);
       setDeleteOpen(false); setDeleting(null); await loadData();
     } catch (e: any) { toast.error('Erro: ' + e.message); }
