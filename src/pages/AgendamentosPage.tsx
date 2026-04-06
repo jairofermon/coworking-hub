@@ -54,7 +54,12 @@ export default function AgendamentosPage() {
     .sort((a, b) => b.data.localeCompare(a.data) || b.hora_inicio.localeCompare(a.hora_inicio));
 
   async function handleSave(ag: Agendamento) {
-    try { await upsertAgendamento(ag); await loadData(); } catch (e: any) { toast.error('Erro: ' + e.message); }
+    try {
+      const isNew = !ag.id;
+      const saved = await upsertAgendamento(ag);
+      await logAudit(isNew ? 'criar' : 'editar', 'agendamento', saved.id, { data: saved.data, hora: saved.hora_inicio });
+      await loadData();
+    } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
 
   async function handleDelete() {
