@@ -15,6 +15,7 @@ import { SalaDeleteDialog } from '@/components/salas/SalaDeleteDialog';
 import { SalaDisponibilidadeDialog } from '@/components/salas/SalaDisponibilidadeDialog';
 import { SalaDetalhesDialog } from '@/components/salas/SalaDetalhesDialog';
 import { fetchSalas, upsertSala, deleteSala, toggleSalaAtivo, fetchDisponibilidades, saveDisponibilidades } from '@/lib/api';
+import { logAudit } from '@/lib/audit';
 
 const DIAS_SEMANA_SHORT: Record<number, string> = {
   0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb',
