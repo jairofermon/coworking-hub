@@ -11,6 +11,7 @@ import { Cliente } from '@/types';
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog';
 import { ClienteDeleteDialog } from '@/components/clientes/ClienteDeleteDialog';
 import { fetchClientes, upsertCliente, deleteCliente } from '@/lib/api';
+import { logAudit } from '@/lib/audit';
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -33,13 +34,19 @@ export default function ClientesPage() {
   );
 
   async function handleSave(cliente: Cliente) {
-    try { await upsertCliente(cliente); await loadData(); } catch (e: any) { toast.error('Erro: ' + e.message); }
+    try {
+      const isNew = !cliente.id;
+      const saved = await upsertCliente(cliente);
+      await logAudit(isNew ? 'criar' : 'editar', 'cliente', saved.id, { nome: saved.nome_razao_social });
+      await loadData();
+    } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
 
   async function handleDelete() {
     if (!deleting) return;
     try {
       await deleteCliente(deleting.id);
+      await logAudit('excluir', 'cliente', deleting.id, { nome: deleting.nome_razao_social });
       toast.success(`Cliente "${deleting.nome_razao_social}" excluído`);
       setDeleteOpen(false); setDeleting(null); await loadData();
     } catch (e: any) { toast.error('Erro: ' + e.message); }

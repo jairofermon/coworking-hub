@@ -12,6 +12,7 @@ import { Contrato, Cliente, Sala, Plano, FormaPagamento } from '@/types';
 import { ContratoFormDialog } from '@/components/contratos/ContratoFormDialog';
 import { ContratoDeleteDialog } from '@/components/contratos/ContratoDeleteDialog';
 import { fetchContratos, upsertContrato, deleteContrato, fetchClientes, fetchSalas, fetchPlanos, fetchFormasPagamento, inactivateExpiredContracts } from '@/lib/api';
+import { logAudit } from '@/lib/audit';
 
 export default function ContratosPage() {
   const [contratos, setContratos] = useState<Contrato[]>([]);
@@ -42,13 +43,19 @@ export default function ContratosPage() {
   });
 
   async function handleSave(contrato: Contrato) {
-    try { await upsertContrato(contrato); await loadData(); } catch (e: any) { toast.error('Erro: ' + e.message); }
+    try {
+      const isNew = !contrato.id;
+      const saved = await upsertContrato(contrato);
+      await logAudit(isNew ? 'criar' : 'editar', 'contrato', saved.id, { codigo: saved.codigo });
+      await loadData();
+    } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
 
   async function handleDelete() {
     if (!deleting) return;
     try {
       await deleteContrato(deleting.id);
+      await logAudit('excluir', 'contrato', deleting.id, { codigo: deleting.codigo });
       toast.success('Contrato excluído');
       setDeleteOpen(false); setDeleting(null); await loadData();
     } catch (e: any) { toast.error('Erro: ' + e.message); }

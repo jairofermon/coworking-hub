@@ -12,6 +12,7 @@ import { Plano } from '@/types';
 import { PlanoFormDialog } from '@/components/planos/PlanoFormDialog';
 import { PlanoDeleteDialog } from '@/components/planos/PlanoDeleteDialog';
 import { fetchPlanos, upsertPlano, deletePlano } from '@/lib/api';
+import { logAudit } from '@/lib/audit';
 
 export default function PlanosPage() {
   const [planos, setPlanos] = useState<Plano[]>([]);
@@ -31,13 +32,19 @@ export default function PlanosPage() {
   const filtered = planos.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()));
 
   async function handleSave(plano: Plano) {
-    try { await upsertPlano(plano); await loadData(); } catch (e: any) { toast.error('Erro: ' + e.message); }
+    try {
+      const isNew = !plano.id;
+      const saved = await upsertPlano(plano);
+      await logAudit(isNew ? 'criar' : 'editar', 'plano', saved.id, { nome: saved.nome });
+      await loadData();
+    } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
 
   async function handleDelete() {
     if (!deleting) return;
     try {
       await deletePlano(deleting.id);
+      await logAudit('excluir', 'plano', deleting.id, { nome: deleting.nome });
       toast.success(`Plano "${deleting.nome}" excluído`);
       setDeleteOpen(false); setDeleting(null); await loadData();
     } catch (e: any) { toast.error('Erro: ' + e.message); }

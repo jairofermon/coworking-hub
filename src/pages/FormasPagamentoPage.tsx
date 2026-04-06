@@ -12,6 +12,7 @@ import { FormaPagamento } from '@/types';
 import { FormaPagamentoFormDialog } from '@/components/formas-pagamento/FormaPagamentoFormDialog';
 import { FormaPagamentoDeleteDialog } from '@/components/formas-pagamento/FormaPagamentoDeleteDialog';
 import { fetchFormasPagamento, upsertFormaPagamento, deleteFormaPagamento } from '@/lib/api';
+import { logAudit } from '@/lib/audit';
 
 export default function FormasPagamentoPage() {
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
@@ -31,13 +32,19 @@ export default function FormasPagamentoPage() {
   const filtered = formas.filter(f => f.nome.toLowerCase().includes(busca.toLowerCase()));
 
   async function handleSave(forma: FormaPagamento) {
-    try { await upsertFormaPagamento(forma); await loadData(); } catch (e: any) { toast.error('Erro: ' + e.message); }
+    try {
+      const isNew = !forma.id;
+      const saved = await upsertFormaPagamento(forma);
+      await logAudit(isNew ? 'criar' : 'editar', 'forma_pagamento', saved.id, { nome: saved.nome });
+      await loadData();
+    } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
 
   async function handleDelete() {
     if (!deleting) return;
     try {
       await deleteFormaPagamento(deleting.id);
+      await logAudit('excluir', 'forma_pagamento', deleting.id, { nome: deleting.nome });
       toast.success(`"${deleting.nome}" excluída`);
       setDeleteOpen(false); setDeleting(null); await loadData();
     } catch (e: any) { toast.error('Erro: ' + e.message); }

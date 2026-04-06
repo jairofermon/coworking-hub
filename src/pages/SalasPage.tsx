@@ -15,6 +15,7 @@ import { SalaDeleteDialog } from '@/components/salas/SalaDeleteDialog';
 import { SalaDisponibilidadeDialog } from '@/components/salas/SalaDisponibilidadeDialog';
 import { SalaDetalhesDialog } from '@/components/salas/SalaDetalhesDialog';
 import { fetchSalas, upsertSala, deleteSala, toggleSalaAtivo, fetchDisponibilidades, saveDisponibilidades } from '@/lib/api';
+import { logAudit } from '@/lib/audit';
 
 const DIAS_SEMANA_SHORT: Record<number, string> = {
   0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb',
@@ -55,13 +56,19 @@ export default function SalasPage() {
   );
 
   async function handleSaveSala(sala: Sala) {
-    try { await upsertSala(sala); await loadData(); } catch (e: any) { toast.error('Erro ao salvar sala: ' + e.message); }
+    try {
+      const isNew = !sala.id;
+      const saved = await upsertSala(sala);
+      await logAudit(isNew ? 'criar' : 'editar', 'sala', saved.id, { nome: saved.nome });
+      await loadData();
+    } catch (e: any) { toast.error('Erro ao salvar sala: ' + e.message); }
   }
 
   async function handleDelete() {
     if (!deletingSala) return;
     try {
       await deleteSala(deletingSala.id);
+      await logAudit('excluir', 'sala', deletingSala.id, { nome: deletingSala.nome });
       toast.success(`Sala "${deletingSala.nome}" excluída`);
       setDeleteOpen(false); setDeletingSala(null); await loadData();
     } catch (e: any) { toast.error('Erro ao excluir: ' + e.message); }
@@ -70,6 +77,7 @@ export default function SalasPage() {
   async function handleToggleAtivo(sala: Sala) {
     try {
       await toggleSalaAtivo(sala.id, !sala.ativo);
+      await logAudit(sala.ativo ? 'desativar' : 'ativar', 'sala', sala.id, { nome: sala.nome });
       toast.success(sala.ativo ? `"${sala.nome}" desativada` : `"${sala.nome}" ativada`);
       await loadData();
     } catch (e: any) { toast.error('Erro: ' + e.message); }
