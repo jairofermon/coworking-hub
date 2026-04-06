@@ -12,6 +12,7 @@ import { Agendamento, Cliente, Sala, Contrato } from '@/types';
 import { AgendamentoFormDialog } from '@/components/agendamentos/AgendamentoFormDialog';
 import { AgendamentoDeleteDialog } from '@/components/agendamentos/AgendamentoDeleteDialog';
 import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos } from '@/lib/api';
+import { logAudit } from '@/lib/audit';
 import { Separator } from '@/components/ui/separator';
 
 export default function AgendamentosPage() {
