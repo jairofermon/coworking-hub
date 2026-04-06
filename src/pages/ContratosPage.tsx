@@ -43,7 +43,12 @@ export default function ContratosPage() {
   });
 
   async function handleSave(contrato: Contrato) {
-    try { await upsertContrato(contrato); await loadData(); } catch (e: any) { toast.error('Erro: ' + e.message); }
+    try {
+      const isNew = !contrato.id;
+      const saved = await upsertContrato(contrato);
+      await logAudit(isNew ? 'criar' : 'editar', 'contrato', saved.id, { codigo: saved.codigo });
+      await loadData();
+    } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
 
   async function handleDelete() {
