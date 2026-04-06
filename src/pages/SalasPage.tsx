@@ -68,6 +68,7 @@ export default function SalasPage() {
     if (!deletingSala) return;
     try {
       await deleteSala(deletingSala.id);
+      await logAudit('excluir', 'sala', deletingSala.id, { nome: deletingSala.nome });
       toast.success(`Sala "${deletingSala.nome}" excluída`);
       setDeleteOpen(false); setDeletingSala(null); await loadData();
     } catch (e: any) { toast.error('Erro ao excluir: ' + e.message); }
