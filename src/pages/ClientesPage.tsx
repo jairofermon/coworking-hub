@@ -11,6 +11,7 @@ import { Cliente } from '@/types';
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog';
 import { ClienteDeleteDialog } from '@/components/clientes/ClienteDeleteDialog';
 import { fetchClientes, upsertCliente, deleteCliente } from '@/lib/api';
+import { logAudit } from '@/lib/audit';
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
