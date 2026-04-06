@@ -34,7 +34,12 @@ export default function ClientesPage() {
   );
 
   async function handleSave(cliente: Cliente) {
-    try { await upsertCliente(cliente); await loadData(); } catch (e: any) { toast.error('Erro: ' + e.message); }
+    try {
+      const isNew = !cliente.id;
+      const saved = await upsertCliente(cliente);
+      await logAudit(isNew ? 'criar' : 'editar', 'cliente', saved.id, { nome: saved.nome_razao_social });
+      await loadData();
+    } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
 
   async function handleDelete() {
