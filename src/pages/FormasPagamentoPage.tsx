@@ -32,7 +32,12 @@ export default function FormasPagamentoPage() {
   const filtered = formas.filter(f => f.nome.toLowerCase().includes(busca.toLowerCase()));
 
   async function handleSave(forma: FormaPagamento) {
-    try { await upsertFormaPagamento(forma); await loadData(); } catch (e: any) { toast.error('Erro: ' + e.message); }
+    try {
+      const isNew = !forma.id;
+      const saved = await upsertFormaPagamento(forma);
+      await logAudit(isNew ? 'criar' : 'editar', 'forma_pagamento', saved.id, { nome: saved.nome });
+      await loadData();
+    } catch (e: any) { toast.error('Erro: ' + e.message); }
   }
 
   async function handleDelete() {
