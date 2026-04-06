@@ -56,7 +56,12 @@ export default function SalasPage() {
   );
 
   async function handleSaveSala(sala: Sala) {
-    try { await upsertSala(sala); await loadData(); } catch (e: any) { toast.error('Erro ao salvar sala: ' + e.message); }
+    try {
+      const isNew = !sala.id;
+      const saved = await upsertSala(sala);
+      await logAudit(isNew ? 'criar' : 'editar', 'sala', saved.id, { nome: saved.nome });
+      await loadData();
+    } catch (e: any) { toast.error('Erro ao salvar sala: ' + e.message); }
   }
 
   async function handleDelete() {
