@@ -12,6 +12,7 @@ import { Contrato, Cliente, Sala, Plano, FormaPagamento } from '@/types';
 import { ContratoFormDialog } from '@/components/contratos/ContratoFormDialog';
 import { ContratoDeleteDialog } from '@/components/contratos/ContratoDeleteDialog';
 import { fetchContratos, upsertContrato, deleteContrato, fetchClientes, fetchSalas, fetchPlanos, fetchFormasPagamento, inactivateExpiredContracts } from '@/lib/api';
+import { logAudit } from '@/lib/audit';
 
 export default function ContratosPage() {
   const [contratos, setContratos] = useState<Contrato[]>([]);
