@@ -12,6 +12,7 @@ import { Plano } from '@/types';
 import { PlanoFormDialog } from '@/components/planos/PlanoFormDialog';
 import { PlanoDeleteDialog } from '@/components/planos/PlanoDeleteDialog';
 import { fetchPlanos, upsertPlano, deletePlano } from '@/lib/api';
+import { logAudit } from '@/lib/audit';
 
 export default function PlanosPage() {
   const [planos, setPlanos] = useState<Plano[]>([]);
