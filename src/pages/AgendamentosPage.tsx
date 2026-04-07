@@ -77,6 +77,7 @@ export default function AgendamentosPage() {
   function renderRow(ag: Agendamento) {
     const cliente = clientes.find(c => c.id === ag.cliente_id);
     const sala = salas.find(s => s.id === ag.sala_id);
+    const contrato = contratos.find(c => c.id === ag.contrato_id);
     return (
       <TableRow key={ag.id}>
         <TableCell className="font-medium">{new Date(ag.data + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
@@ -87,6 +88,7 @@ export default function AgendamentosPage() {
           </div>
         </TableCell>
         <TableCell>{cliente?.nome_razao_social}</TableCell>
+        <TableCell className="font-mono text-xs">{contrato?.codigo || '—'}</TableCell>
         <TableCell className="text-muted-foreground">{ag.hora_inicio} - {ag.hora_fim}</TableCell>
         <TableCell><StatusBadge status={ag.status} /></TableCell>
         <TableCell className="text-muted-foreground text-sm">{ag.observacao || '—'}</TableCell>
@@ -110,6 +112,7 @@ export default function AgendamentosPage() {
         <TableHead>Data</TableHead>
         <TableHead>Sala</TableHead>
         <TableHead>Cliente</TableHead>
+        <TableHead>Contrato</TableHead>
         <TableHead>Horário</TableHead>
         <TableHead>Status</TableHead>
         <TableHead>Observação</TableHead>
@@ -129,7 +132,7 @@ export default function AgendamentosPage() {
           <Table>
             {tableHeader}
             <TableBody>
-              {futuros.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Nenhum agendamento futuro.</TableCell></TableRow>}
+              {futuros.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-6">Nenhum agendamento futuro.</TableCell></TableRow>}
               {futuros.map(renderRow)}
             </TableBody>
           </Table>
@@ -151,7 +154,7 @@ export default function AgendamentosPage() {
         </div>
       )}
 
-      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientes} salas={salas} contratos={contratos} />
+      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientes} salas={salas} contratos={contratos} agendamentos={agendamentos} />
       <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
     </div>
   );

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Agendamento, Cliente, Sala, Contrato } from '@/types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
   open: boolean;
@@ -16,9 +17,10 @@ interface Props {
   clientes: Cliente[];
   salas: Sala[];
   contratos: Contrato[];
+  agendamentos: Agendamento[];
 }
 
-export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave, clientes, salas, contratos }: Props) {
+export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave, clientes, salas, contratos, agendamentos }: Props) {
   const isEdit = !!agendamento;
   const [form, setForm] = useState({
     sala_id: '', cliente_id: '', contrato_id: '', data: '', hora_inicio: '', hora_fim: '',
@@ -39,7 +41,10 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
     setErrors({});
   }, [agendamento, open]);
 
-  const contratosCliente = contratos.filter(c => c.cliente_id === form.cliente_id && c.status === 'ativo');
+  // Contratos ativos do cliente selecionado para a sala selecionada
+  const contratosClienteSala = contratos.filter(
+    c => c.cliente_id === form.cliente_id && c.sala_id === form.sala_id && c.status === 'ativo'
+  );
 
   function handleSave() {
     const e: Record<string, string> = {};
@@ -49,6 +54,40 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
     if (!form.hora_inicio) e.hora_inicio = 'Informe o horário de início';
     if (!form.hora_fim) e.hora_fim = 'Informe o horário de fim';
     if (form.hora_inicio && form.hora_fim && form.hora_inicio >= form.hora_fim) e.hora_fim = 'Horário fim deve ser maior que início';
+
+    // Validar contrato ativo com a sala
+    if (form.cliente_id && form.sala_id && contratosClienteSala.length === 0) {
+      e.contrato_id = 'Cliente não possui contrato ativo com esta sala';
+    }
+
+    // Validar que contrato foi selecionado
+    if (!form.contrato_id || form.contrato_id === 'none') {
+      if (contratosClienteSala.length > 0) {
+        e.contrato_id = 'Selecione um contrato';
+      }
+    }
+
+    // Validar data dentro do intervalo do contrato
+    if (form.contrato_id && form.contrato_id !== 'none' && form.data) {
+      const contrato = contratos.find(c => c.id === form.contrato_id);
+      if (contrato && (form.data < contrato.data_inicio || form.data > contrato.data_fim)) {
+        e.data = `Data fora do período do contrato (${new Date(contrato.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(contrato.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')})`;
+      }
+    }
+
+    // Validar conflito de horário na sala
+    if (form.sala_id && form.data && form.hora_inicio && form.hora_fim) {
+      const conflito = agendamentos.find(ag => {
+        if (isEdit && ag.id === agendamento?.id) return false;
+        return ag.sala_id === form.sala_id && ag.data === form.data &&
+          ag.hora_inicio < form.hora_fim && ag.hora_fim > form.hora_inicio;
+      });
+      if (conflito) {
+        const clienteConflito = clientes.find(c => c.id === conflito.cliente_id);
+        e.hora_inicio = `Conflito: ${conflito.hora_inicio}-${conflito.hora_fim} (${clienteConflito?.nome_razao_social || 'outro agendamento'})`;
+      }
+    }
+
     setErrors(e);
     if (Object.keys(e).length > 0) return;
 
@@ -75,7 +114,7 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
             </div>
             <div className="space-y-2">
               <Label>Sala *</Label>
-              <Select value={form.sala_id} onValueChange={v => f('sala_id', v)}>
+              <Select value={form.sala_id} onValueChange={v => { f('sala_id', v); f('contrato_id', ''); }}>
                 <SelectTrigger className={errors.sala_id ? 'border-destructive' : ''}><SelectValue placeholder="Selecione..." /></SelectTrigger>
                 <SelectContent>{salas.filter(s => s.ativo).map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}</SelectContent>
               </Select>
@@ -83,14 +122,18 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Contrato (opcional)</Label>
-            <Select value={form.contrato_id} onValueChange={v => f('contrato_id', v)}>
-              <SelectTrigger><SelectValue placeholder="Selecione um contrato..." /></SelectTrigger>
+            <Label>Contrato *</Label>
+            <Select value={form.contrato_id} onValueChange={v => f('contrato_id', v)} disabled={contratosClienteSala.length === 0}>
+              <SelectTrigger className={errors.contrato_id ? 'border-destructive' : ''}><SelectValue placeholder={contratosClienteSala.length === 0 ? (form.cliente_id && form.sala_id ? 'Sem contrato ativo para esta sala' : 'Selecione cliente e sala') : 'Selecione um contrato...'} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Sem contrato</SelectItem>
-                {contratosCliente.map(c => <SelectItem key={c.id} value={c.id}>Contrato {c.data_inicio} — {c.data_fim}</SelectItem>)}
+                {contratosClienteSala.map(c => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.codigo} ({new Date(c.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')} — {new Date(c.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')})
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            {errors.contrato_id && <p className="text-sm text-destructive">{errors.contrato_id}</p>}
           </div>
           <div className="space-y-2">
             <Label>Data *</Label>

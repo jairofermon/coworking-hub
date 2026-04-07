@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   ScrollText,
   LogOut,
+  UserCircle,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -39,11 +40,6 @@ const mainItems = [
 const configItems = [
   { title: 'Planos', url: '/configuracoes/planos', icon: ListChecks },
   { title: 'Formas de Pagamento', url: '/configuracoes/formas-pagamento', icon: CreditCard },
-];
-
-const adminItems = [
-  { title: 'Usuários', url: '/admin/usuarios', icon: ShieldCheck },
-  { title: 'Log de Auditoria', url: '/admin/auditoria', icon: ScrollText },
 ];
 
 export function AppSidebar() {
@@ -113,16 +109,14 @@ export function AppSidebar() {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {adminItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink to={item.url} activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
-                        <item.icon className="mr-2 h-4 w-4 shrink-0" />
-                        {!collapsed && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/admin/auditoria" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
+                      <ScrollText className="mr-2 h-4 w-4 shrink-0" />
+                      {!collapsed && <span>Log de Auditoria</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -134,6 +128,14 @@ export function AppSidebar() {
             <p className="text-xs text-muted-foreground truncate mb-2">{user.email}</p>
           )}
           <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <NavLink to="/minha-conta" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
+                  <UserCircle className="mr-2 h-4 w-4 shrink-0" />
+                  {!collapsed && <span>Minha Conta</span>}
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton onClick={signOut}>
                 <LogOut className="mr-2 h-4 w-4 shrink-0" />
