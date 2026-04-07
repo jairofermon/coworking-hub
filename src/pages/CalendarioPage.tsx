@@ -6,19 +6,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Agendamento, Cliente, Sala } from '@/types';
-import { fetchAgendamentos, fetchClientes, fetchSalas } from '@/lib/api';
+import { Agendamento, Cliente, Sala, Contrato } from '@/types';
+import { fetchAgendamentos, fetchClientes, fetchSalas, fetchContratos } from '@/lib/api';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, isSameDay, eachDayOfInterval, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 type ViewMode = 'day' | 'week' | 'month';
 
-const HOURS = Array.from({ length: 15 }, (_, i) => i + 7); // 7h to 21h
+const HOURS = Array.from({ length: 15 }, (_, i) => i + 7);
 
 export default function CalendarioPage() {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [salas, setSalas] = useState<Sala[]>([]);
+  const [contratos, setContratos] = useState<Contrato[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
@@ -27,8 +28,8 @@ export default function CalendarioPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [ag, cl, sl] = await Promise.all([fetchAgendamentos(), fetchClientes(), fetchSalas()]);
-        setAgendamentos(ag); setClientes(cl); setSalas(sl);
+        const [ag, cl, sl, ct] = await Promise.all([fetchAgendamentos(), fetchClientes(), fetchSalas(), fetchContratos()]);
+        setAgendamentos(ag); setClientes(cl); setSalas(sl); setContratos(ct);
       } catch (e: any) { toast.error('Erro: ' + e.message); } finally { setLoading(false); }
     }
     load();
@@ -112,18 +113,18 @@ export default function CalendarioPage() {
       </div>
 
       {viewMode === 'month' ? (
-        <MonthView days={days} getAgendamentosForDay={getAgendamentosForDay} salas={salas} clientes={clientes} currentDate={currentDate} />
+        <MonthView days={days} getAgendamentosForDay={getAgendamentosForDay} salas={salas} clientes={clientes} contratos={contratos} currentDate={currentDate} />
       ) : (
-        <WeekDayView days={days} hours={HOURS} getAgendamentosForDay={getAgendamentosForDay} salas={salas} clientes={clientes} />
+        <WeekDayView days={days} hours={HOURS} getAgendamentosForDay={getAgendamentosForDay} salas={salas} clientes={clientes} contratos={contratos} />
       )}
     </div>
   );
 }
 
-function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes }: {
+function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes, contratos }: {
   days: Date[]; hours: number[];
   getAgendamentosForDay: (d: Date) => Agendamento[];
-  salas: Sala[]; clientes: Cliente[];
+  salas: Sala[]; clientes: Cliente[]; contratos: Contrato[];
 }) {
   return (
     <Card className="overflow-auto">
@@ -154,6 +155,7 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes }: {
                     {hourAgs.map(ag => {
                       const sala = salas.find(s => s.id === ag.sala_id);
                       const cliente = clientes.find(c => c.id === ag.cliente_id);
+                      const contrato = contratos.find(c => c.id === ag.contrato_id);
                       const startH = parseInt(ag.hora_inicio.split(':')[0]);
                       const startM = parseInt(ag.hora_inicio.split(':')[1]);
                       const endH = parseInt(ag.hora_fim.split(':')[0]);
@@ -171,10 +173,11 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes }: {
                             top: `${top}px`,
                             height: `${height}px`,
                           }}
-                          title={`${cliente?.nome_razao_social} · ${sala?.nome} · ${ag.hora_inicio}-${ag.hora_fim}`}
+                          title={`${sala?.nome} · ${cliente?.nome_razao_social} · ${contrato?.codigo || ''} · ${ag.hora_inicio}-${ag.hora_fim}`}
                         >
                           <div className="font-semibold truncate" style={{ color: sala?.cor_identificacao }}>{sala?.nome}</div>
                           <div className="truncate">{cliente?.nome_razao_social}</div>
+                          {contrato && <div className="truncate text-muted-foreground">{contrato.codigo}</div>}
                           <div className="text-muted-foreground truncate">{ag.hora_inicio}-{ag.hora_fim}</div>
                         </div>
                       );
@@ -190,10 +193,10 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes }: {
   );
 }
 
-function MonthView({ days, getAgendamentosForDay, salas, clientes, currentDate }: {
+function MonthView({ days, getAgendamentosForDay, salas, clientes, contratos, currentDate }: {
   days: Date[];
   getAgendamentosForDay: (d: Date) => Agendamento[];
-  salas: Sala[]; clientes: Cliente[]; currentDate: Date;
+  salas: Sala[]; clientes: Cliente[]; contratos: Contrato[]; currentDate: Date;
 }) {
   const weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
   const currentMonth = currentDate.getMonth();
@@ -221,14 +224,15 @@ function MonthView({ days, getAgendamentosForDay, salas, clientes, currentDate }
                 {ags.slice(0, 3).map(ag => {
                   const sala = salas.find(s => s.id === ag.sala_id);
                   const cliente = clientes.find(c => c.id === ag.cliente_id);
+                  const contrato = contratos.find(c => c.id === ag.contrato_id);
                   return (
                     <div
                       key={ag.id}
                       className="text-[10px] rounded px-1 py-0.5 truncate"
                       style={{ backgroundColor: sala?.cor_identificacao + '20', color: sala?.cor_identificacao }}
-                      title={`${sala?.nome} · ${cliente?.nome_razao_social} · ${ag.hora_inicio}-${ag.hora_fim}`}
+                      title={`${sala?.nome} · ${cliente?.nome_razao_social} · ${contrato?.codigo || ''} (${contrato ? new Date(contrato.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR') + ' — ' + new Date(contrato.data_fim + 'T00:00:00').toLocaleDateString('pt-BR') : ''}) · ${ag.hora_inicio}-${ag.hora_fim}`}
                     >
-                      {ag.hora_inicio} {sala?.nome} - {cliente?.nome_razao_social?.split(' ')[0]}
+                      {ag.hora_inicio} {sala?.nome} {contrato?.codigo ? `[${contrato.codigo}]` : ''} - {cliente?.nome_razao_social?.split(' ')[0]}
                     </div>
                   );
                 })}
