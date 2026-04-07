@@ -50,29 +50,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!mounted) return;
         setSession(session);
         if (session?.user) {
-          const authUser = await loadAuthUser(session.user);
-          setUser(authUser);
+          // Defer profile fetch to avoid deadlock with onAuthStateChange
+          setTimeout(async () => {
+            if (!mounted) return;
+            try {
+              const authUser = await loadAuthUser(session.user);
+              if (mounted) setUser(authUser);
+            } catch (e) {
+              console.error('Error loading user profile:', e);
+              if (mounted) setUser(null);
+            }
+            if (mounted) setLoading(false);
+          }, 0);
         } else {
           setUser(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
       setSession(session);
       if (session?.user) {
-        const authUser = await loadAuthUser(session.user);
-        setUser(authUser);
+        try {
+          const authUser = await loadAuthUser(session.user);
+          if (mounted) setUser(authUser);
+        } catch (e) {
+          console.error('Error loading user profile:', e);
+          if (mounted) setUser(null);
+        }
       }
-      setLoading(false);
+      if (mounted) setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
