@@ -173,7 +173,8 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes }: {
                           }}
                           title={`${cliente?.nome_razao_social} · ${sala?.nome} · ${ag.hora_inicio}-${ag.hora_fim}`}
                         >
-                          <div className="font-semibold truncate" style={{ color: sala?.cor_identificacao }}>{cliente?.nome_razao_social}</div>
+                          <div className="font-semibold truncate" style={{ color: sala?.cor_identificacao }}>{sala?.nome}</div>
+                          <div className="truncate">{cliente?.nome_razao_social}</div>
                           <div className="text-muted-foreground truncate">{ag.hora_inicio}-{ag.hora_fim}</div>
                         </div>
                       );
