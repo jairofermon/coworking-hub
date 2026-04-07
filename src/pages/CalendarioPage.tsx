@@ -173,7 +173,8 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes }: {
                           }}
                           title={`${cliente?.nome_razao_social} · ${sala?.nome} · ${ag.hora_inicio}-${ag.hora_fim}`}
                         >
-                          <div className="font-semibold truncate" style={{ color: sala?.cor_identificacao }}>{cliente?.nome_razao_social}</div>
+                          <div className="font-semibold truncate" style={{ color: sala?.cor_identificacao }}>{sala?.nome}</div>
+                          <div className="truncate">{cliente?.nome_razao_social}</div>
                           <div className="text-muted-foreground truncate">{ag.hora_inicio}-{ag.hora_fim}</div>
                         </div>
                       );
@@ -225,9 +226,9 @@ function MonthView({ days, getAgendamentosForDay, salas, clientes, currentDate }
                       key={ag.id}
                       className="text-[10px] rounded px-1 py-0.5 truncate"
                       style={{ backgroundColor: sala?.cor_identificacao + '20', color: sala?.cor_identificacao }}
-                      title={`${cliente?.nome_razao_social} · ${ag.hora_inicio}-${ag.hora_fim}`}
+                      title={`${sala?.nome} · ${cliente?.nome_razao_social} · ${ag.hora_inicio}-${ag.hora_fim}`}
                     >
-                      {ag.hora_inicio} {cliente?.nome_razao_social?.split(' ')[0]}
+                      {ag.hora_inicio} {sala?.nome} - {cliente?.nome_razao_social?.split(' ')[0]}
                     </div>
                   );
                 })}
