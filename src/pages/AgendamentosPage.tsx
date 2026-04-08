@@ -20,6 +20,7 @@ export default function AgendamentosPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [salas, setSalas] = useState<Sala[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [planos, setPlanos] = useState<Plano[]>([]);
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
