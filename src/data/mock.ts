@@ -20,10 +20,10 @@ export const mockClientes: Cliente[] = [
 ];
 
 export const mockPlanos: Plano[] = [
-  { id: '1', nome: 'Avulso', descricao: 'Uso por hora avulsa', valor_previsto: 80, ativo: true },
-  { id: '2', nome: 'Mensal 20h', descricao: '20 horas mensais', valor_previsto: 1200, ativo: true },
-  { id: '3', nome: 'Mensal 40h', descricao: '40 horas mensais', valor_previsto: 2000, ativo: true },
-  { id: '4', nome: 'Integral', descricao: 'Uso integral do espaço', valor_previsto: 3500, ativo: false },
+  { id: '1', nome: 'Avulso', descricao: 'Uso por hora avulsa', valor_previsto: 80, horas_previstas: 1, ativo: true },
+  { id: '2', nome: 'Mensal 20h', descricao: '20 horas mensais', valor_previsto: 1200, horas_previstas: 20, ativo: true },
+  { id: '3', nome: 'Mensal 40h', descricao: '40 horas mensais', valor_previsto: 2000, horas_previstas: 40, ativo: true },
+  { id: '4', nome: 'Integral', descricao: 'Uso integral do espaço', valor_previsto: 3500, horas_previstas: 0, ativo: false },
 ];
 
 export const mockFormasPagamento: FormaPagamento[] = [

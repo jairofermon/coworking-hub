@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Agendamento, Cliente, Sala, Contrato } from '@/types';
+import { Agendamento, Cliente, Sala, Contrato, Plano } from '@/types';
 import { AgendamentoFormDialog } from '@/components/agendamentos/AgendamentoFormDialog';
 import { AgendamentoDeleteDialog } from '@/components/agendamentos/AgendamentoDeleteDialog';
-import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos } from '@/lib/api';
+import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos, fetchPlanos } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import { Separator } from '@/components/ui/separator';
 
