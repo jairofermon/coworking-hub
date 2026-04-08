@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Agendamento, Cliente, Sala, Contrato } from '@/types';
+import { Agendamento, Cliente, Sala, Contrato, Plano } from '@/types';
 import { AgendamentoFormDialog } from '@/components/agendamentos/AgendamentoFormDialog';
 import { AgendamentoDeleteDialog } from '@/components/agendamentos/AgendamentoDeleteDialog';
-import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos } from '@/lib/api';
+import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos, fetchPlanos } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import { Separator } from '@/components/ui/separator';
 
@@ -20,6 +20,7 @@ export default function AgendamentosPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [salas, setSalas] = useState<Sala[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [planos, setPlanos] = useState<Plano[]>([]);
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -29,8 +30,8 @@ export default function AgendamentosPage() {
 
   async function loadData() {
     try {
-      const [ag, cl, sl, ct] = await Promise.all([fetchAgendamentos(), fetchClientes(), fetchSalas(), fetchContratos()]);
-      setAgendamentos(ag); setClientes(cl); setSalas(sl); setContratos(ct);
+      const [ag, cl, sl, ct, pl] = await Promise.all([fetchAgendamentos(), fetchClientes(), fetchSalas(), fetchContratos(), fetchPlanos()]);
+      setAgendamentos(ag); setClientes(cl); setSalas(sl); setContratos(ct); setPlanos(pl);
     } catch (e: any) { toast.error('Erro: ' + e.message); } finally { setLoading(false); }
   }
 
@@ -154,7 +155,7 @@ export default function AgendamentosPage() {
         </div>
       )}
 
-      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientes} salas={salas} contratos={contratos} agendamentos={agendamentos} />
+      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientes} salas={salas} contratos={contratos} agendamentos={agendamentos} planos={planos} />
       <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
     </div>
   );

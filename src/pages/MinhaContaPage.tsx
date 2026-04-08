@@ -28,7 +28,6 @@ export default function MinhaContaPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Admin: user management
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
@@ -41,18 +40,14 @@ export default function MinhaContaPage() {
   async function loadUsers() {
     setLoadingUsers(true);
     try {
-      const { data: profiles, error } = await supabase.from('profiles').select('user_id, full_name, approved');
+      const { data: profiles, error } = await supabase.from('profiles').select('user_id, full_name, email, approved');
       if (error) throw error;
       const { data: roles } = await supabase.from('user_roles').select('user_id, role');
-      const { data: auditEmails } = await supabase.from('audit_log').select('user_id, user_email');
-      const emailMap = new Map<string, string>();
-      auditEmails?.forEach((a: any) => { if (a.user_email) emailMap.set(a.user_id, a.user_email); });
-      if (currentUser) emailMap.set(currentUser.id, currentUser.email);
 
       const userRows: UserRow[] = (profiles ?? []).map((p: any) => ({
         user_id: p.user_id,
         full_name: p.full_name || '(sem nome)',
-        email: emailMap.get(p.user_id) ?? '',
+        email: p.email || '',
         approved: p.approved,
         isAdmin: roles?.some((r: any) => r.user_id === p.user_id && r.role === 'admin') ?? false,
       }));

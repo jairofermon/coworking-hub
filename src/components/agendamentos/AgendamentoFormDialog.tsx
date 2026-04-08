@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Agendamento, Cliente, Sala, Contrato } from '@/types';
+import { Progress } from '@/components/ui/progress';
+import { Agendamento, Cliente, Sala, Contrato, Plano } from '@/types';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 interface Props {
   open: boolean;
@@ -18,9 +19,17 @@ interface Props {
   salas: Sala[];
   contratos: Contrato[];
   agendamentos: Agendamento[];
+  planos: Plano[];
 }
 
-export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave, clientes, salas, contratos, agendamentos }: Props) {
+function calcHours(horaInicio: string, horaFim: string): number {
+  if (!horaInicio || !horaFim) return 0;
+  const [h1, m1] = horaInicio.split(':').map(Number);
+  const [h2, m2] = horaFim.split(':').map(Number);
+  return Math.max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60);
+}
+
+export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave, clientes, salas, contratos, agendamentos, planos }: Props) {
   const isEdit = !!agendamento;
   const [form, setForm] = useState({
     sala_id: '', cliente_id: '', contrato_id: '', data: '', hora_inicio: '', hora_fim: '',
@@ -41,10 +50,28 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
     setErrors({});
   }, [agendamento, open]);
 
-  // Contratos ativos do cliente selecionado para a sala selecionada
   const contratosClienteSala = contratos.filter(
     c => c.cliente_id === form.cliente_id && c.sala_id === form.sala_id && c.status === 'ativo'
   );
+
+  // Hour usage calculation
+  const selectedContrato = contratos.find(c => c.id === form.contrato_id);
+  const selectedPlano = selectedContrato ? planos.find(p => p.id === selectedContrato.plano_id) : null;
+  const horasPrevistas = selectedPlano?.horas_previstas ?? 0;
+
+  const horasUsadas = useMemo(() => {
+    if (!form.contrato_id) return 0;
+    return agendamentos
+      .filter(ag => {
+        if (isEdit && ag.id === agendamento?.id) return false;
+        return ag.contrato_id === form.contrato_id && ag.status !== 'cancelado';
+      })
+      .reduce((sum, ag) => sum + calcHours(ag.hora_inicio, ag.hora_fim), 0);
+  }, [form.contrato_id, agendamentos, agendamento, isEdit]);
+
+  const horasAgendamentoAtual = calcHours(form.hora_inicio, form.hora_fim);
+  const horasTotalAposAgendamento = horasUsadas + horasAgendamentoAtual;
+  const horasDisponivel = Math.max(0, horasPrevistas - horasUsadas);
 
   function handleSave() {
     const e: Record<string, string> = {};
@@ -55,19 +82,16 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
     if (!form.hora_fim) e.hora_fim = 'Informe o horário de fim';
     if (form.hora_inicio && form.hora_fim && form.hora_inicio >= form.hora_fim) e.hora_fim = 'Horário fim deve ser maior que início';
 
-    // Validar contrato ativo com a sala
     if (form.cliente_id && form.sala_id && contratosClienteSala.length === 0) {
       e.contrato_id = 'Cliente não possui contrato ativo com esta sala';
     }
 
-    // Validar que contrato foi selecionado
     if (!form.contrato_id || form.contrato_id === 'none') {
       if (contratosClienteSala.length > 0) {
         e.contrato_id = 'Selecione um contrato';
       }
     }
 
-    // Validar data dentro do intervalo do contrato
     if (form.contrato_id && form.contrato_id !== 'none' && form.data) {
       const contrato = contratos.find(c => c.id === form.contrato_id);
       if (contrato && (form.data < contrato.data_inicio || form.data > contrato.data_fim)) {
@@ -75,7 +99,6 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
       }
     }
 
-    // Validar conflito de horário na sala
     if (form.sala_id && form.data && form.hora_inicio && form.hora_fim) {
       const conflito = agendamentos.find(ag => {
         if (isEdit && ag.id === agendamento?.id) return false;
@@ -88,6 +111,11 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
       }
     }
 
+    // Validate hour limit
+    if (horasPrevistas > 0 && form.hora_inicio && form.hora_fim && horasTotalAposAgendamento > horasPrevistas) {
+      e.hora_fim = `Excede o limite de horas do plano. Disponível: ${horasDisponivel.toFixed(1)}h, este agendamento: ${horasAgendamentoAtual.toFixed(1)}h`;
+    }
+
     setErrors(e);
     if (Object.keys(e).length > 0) return;
 
@@ -97,6 +125,8 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
   }
 
   const f = (field: string, value: any) => setForm(prev => ({ ...prev, [field]: value }));
+
+  const usagePercent = horasPrevistas > 0 ? Math.min(100, (horasUsadas / horasPrevistas) * 100) : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -135,6 +165,31 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
             </Select>
             {errors.contrato_id && <p className="text-sm text-destructive">{errors.contrato_id}</p>}
           </div>
+
+          {/* Hour usage indicator */}
+          {form.contrato_id && selectedPlano && horasPrevistas > 0 && (
+            <div className="rounded-lg border p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Clock className="h-4 w-4" />
+                Controle de Horas — {selectedPlano.nome}
+              </div>
+              <Progress value={usagePercent} className="h-2" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Usadas: {horasUsadas.toFixed(1)}h</span>
+                <span>Total: {horasPrevistas.toFixed(1)}h</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs">
+                {horasDisponivel <= 0 ? (
+                  <><AlertTriangle className="h-3.5 w-3.5 text-destructive" /><span className="text-destructive font-medium">Sem horas disponíveis</span></>
+                ) : horasAgendamentoAtual > 0 && horasTotalAposAgendamento > horasPrevistas ? (
+                  <><AlertTriangle className="h-3.5 w-3.5 text-destructive" /><span className="text-destructive font-medium">Este agendamento ({horasAgendamentoAtual.toFixed(1)}h) excede o limite. Disponível: {horasDisponivel.toFixed(1)}h</span></>
+                ) : (
+                  <><CheckCircle2 className="h-3.5 w-3.5 text-green-600" /><span className="text-green-700 font-medium">Disponível: {horasDisponivel.toFixed(1)}h{horasAgendamentoAtual > 0 ? ` · Este agendamento: ${horasAgendamentoAtual.toFixed(1)}h` : ''}</span></>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Data *</Label>
             <Input type="date" value={form.data} onChange={e => f('data', e.target.value)} className={errors.data ? 'border-destructive' : ''} />

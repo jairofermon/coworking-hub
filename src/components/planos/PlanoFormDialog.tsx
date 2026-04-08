@@ -16,12 +16,12 @@ interface Props {
 
 export function PlanoFormDialog({ open, onOpenChange, plano, onSave }: Props) {
   const isEdit = !!plano;
-  const [form, setForm] = useState({ nome: '', descricao: '', valor_previsto: 0, ativo: true });
+  const [form, setForm] = useState({ nome: '', descricao: '', valor_previsto: 0, horas_previstas: 0, ativo: true });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (plano) setForm({ nome: plano.nome, descricao: plano.descricao, valor_previsto: plano.valor_previsto, ativo: plano.ativo });
-    else setForm({ nome: '', descricao: '', valor_previsto: 0, ativo: true });
+    if (plano) setForm({ nome: plano.nome, descricao: plano.descricao, valor_previsto: plano.valor_previsto, horas_previstas: plano.horas_previstas, ativo: plano.ativo });
+    else setForm({ nome: '', descricao: '', valor_previsto: 0, horas_previstas: 0, ativo: true });
     setErrors({});
   }, [plano, open]);
 
@@ -49,6 +49,11 @@ export function PlanoFormDialog({ open, onOpenChange, plano, onSave }: Props) {
           <div className="space-y-2">
             <Label>Valor Previsto (R$)</Label>
             <Input type="number" step="0.01" value={form.valor_previsto} onChange={e => setForm(f => ({ ...f, valor_previsto: parseFloat(e.target.value) || 0 }))} />
+          </div>
+          <div className="space-y-2">
+            <Label>Horas Previstas</Label>
+            <Input type="number" step="0.5" min="0" value={form.horas_previstas} onChange={e => setForm(f => ({ ...f, horas_previstas: parseFloat(e.target.value) || 0 }))} />
+            <p className="text-xs text-muted-foreground">Quantidade de horas que o plano permite agendar no período do contrato</p>
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3">
             <Label>Plano ativo</Label>

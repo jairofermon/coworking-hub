@@ -62,7 +62,7 @@ export default function PlanosPage() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
-              <TableHead>Valor Previsto</TableHead>
+              <TableHead>Horas Previstas</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-12" />
             </TableRow>
@@ -73,7 +73,7 @@ export default function PlanosPage() {
               <TableRow key={p.id}>
                 <TableCell className="font-medium">{p.nome}</TableCell>
                 <TableCell className="text-muted-foreground">{p.descricao}</TableCell>
-                <TableCell>R$ {p.valor_previsto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
+                <TableCell>{p.horas_previstas > 0 ? `${p.horas_previstas}h` : '—'}</TableCell>
                 <TableCell><StatusBadge status={p.ativo} /></TableCell>
                 <TableCell>
                   <DropdownMenu>

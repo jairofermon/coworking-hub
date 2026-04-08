@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusBadge } from '@/components/StatusBadge';
-import { DoorOpen, Users, FileText, CalendarDays, TrendingUp, AlertCircle, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { DoorOpen, Users, FileText, CalendarDays, TrendingUp, Loader2 } from 'lucide-react';
 import { fetchSalas, fetchClientes, fetchContratos, fetchAgendamentos, inactivateExpiredContracts } from '@/lib/api';
 import { Sala, Cliente, Contrato, Agendamento } from '@/types';
 
@@ -12,6 +15,10 @@ export default function DashboardPage() {
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [filtroSala, setFiltroSala] = useState<string>('all');
+  const [filtroDataInicio, setFiltroDataInicio] = useState<string>('');
+  const [filtroDataFim, setFiltroDataFim] = useState<string>('');
 
   useEffect(() => {
     async function load() {
@@ -24,15 +31,35 @@ export default function DashboardPage() {
     load();
   }, []);
 
+  const contratosFiltered = useMemo(() => {
+    return contratos.filter(c => {
+      if (filtroSala !== 'all' && c.sala_id !== filtroSala) return false;
+      if (filtroDataInicio && c.data_fim < filtroDataInicio) return false;
+      if (filtroDataFim && c.data_inicio > filtroDataFim) return false;
+      return true;
+    });
+  }, [contratos, filtroSala, filtroDataInicio, filtroDataFim]);
+
+  const agendamentosFiltered = useMemo(() => {
+    return agendamentos.filter(a => {
+      if (filtroSala !== 'all' && a.sala_id !== filtroSala) return false;
+      if (filtroDataInicio && a.data < filtroDataInicio) return false;
+      if (filtroDataFim && a.data > filtroDataFim) return false;
+      return true;
+    });
+  }, [agendamentos, filtroSala, filtroDataInicio, filtroDataFim]);
+
   if (loading) return <div className="page-container flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
 
   const today = new Date().toISOString().split('T')[0];
-  const agendamentosHoje = agendamentos.filter(a => a.data === today);
-  const contratosAtivos = contratos.filter(c => c.status === 'ativo');
-  const proximosAgendamentos = agendamentos.filter(a => a.data >= today && a.status !== 'cancelado').slice(0, 5);
+  const agendamentosHoje = agendamentosFiltered.filter(a => a.data === today);
+  const contratosAtivos = contratosFiltered.filter(c => c.status === 'ativo');
+  const proximosAgendamentos = agendamentosFiltered.filter(a => a.data >= today && a.status !== 'cancelado').slice(0, 5);
+
+  const salasFiltered = filtroSala === 'all' ? salas : salas.filter(s => s.id === filtroSala);
 
   const stats = [
-    { label: 'Salas Ativas', value: salas.filter(s => s.ativo).length, total: salas.length, icon: DoorOpen, color: 'text-primary' },
+    { label: 'Salas Ativas', value: salasFiltered.filter(s => s.ativo).length, total: salasFiltered.length, icon: DoorOpen, color: 'text-primary' },
     { label: 'Clientes', value: clientes.length, icon: Users, color: 'text-primary' },
     { label: 'Contratos Ativos', value: contratosAtivos.length, icon: FileText, color: 'text-green-600' },
     { label: 'Agendamentos Hoje', value: agendamentosHoje.length, icon: CalendarDays, color: 'text-amber-600' },
@@ -41,6 +68,41 @@ export default function DashboardPage() {
   return (
     <div className="page-container">
       <PageHeader titulo="Dashboard" subtitulo="Visão geral do CM Coworking" />
+
+      {/* Filtros */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 items-end">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Sala</Label>
+          <Select value={filtroSala} onValueChange={setFiltroSala}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Todas as salas" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as salas</SelectItem>
+              {salas.filter(s => s.ativo).map(s => (
+                <SelectItem key={s.id} value={s.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.cor_identificacao }} />
+                    {s.nome}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Data início</Label>
+          <Input type="date" value={filtroDataInicio} onChange={e => setFiltroDataInicio(e.target.value)} className="w-[160px]" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Data fim</Label>
+          <Input type="date" value={filtroDataFim} onChange={e => setFiltroDataFim(e.target.value)} className="w-[160px]" />
+        </div>
+        {(filtroSala !== 'all' || filtroDataInicio || filtroDataFim) && (
+          <button className="text-sm text-primary hover:underline" onClick={() => { setFiltroSala('all'); setFiltroDataInicio(''); setFiltroDataFim(''); }}>
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.label}>

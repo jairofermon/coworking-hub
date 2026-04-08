@@ -113,19 +113,24 @@ export async function deleteCliente(id: string) {
 export async function fetchPlanos(): Promise<Plano[]> {
   const { data, error } = await supabase.from('planos').select('*').order('nome');
   if (error) throw error;
-  return (data ?? []).map(r => ({ id: r.id, nome: r.nome, descricao: r.descricao ?? '', valor_previsto: Number((r as any).valor_previsto ?? 0), ativo: r.ativo }));
+  return (data ?? []).map(r => ({
+    id: r.id, nome: r.nome, descricao: r.descricao ?? '',
+    valor_previsto: Number((r as any).valor_previsto ?? 0),
+    horas_previstas: Number((r as any).horas_previstas ?? 0),
+    ativo: r.ativo,
+  }));
 }
 
 export async function upsertPlano(p: Omit<Plano, 'id'> & { id?: string }): Promise<Plano> {
-  const payload = { nome: p.nome, descricao: p.descricao, valor_previsto: p.valor_previsto, ativo: p.ativo } as any;
+  const payload = { nome: p.nome, descricao: p.descricao, horas_previstas: p.horas_previstas, ativo: p.ativo } as any;
   if (p.id) {
     const { data, error } = await supabase.from('planos').update(payload).eq('id', p.id).select().single();
     if (error) throw error;
-    return { id: data.id, nome: data.nome, descricao: data.descricao ?? '', valor_previsto: Number((data as any).valor_previsto ?? 0), ativo: data.ativo };
+    return { id: data.id, nome: data.nome, descricao: data.descricao ?? '', valor_previsto: Number((data as any).valor_previsto ?? 0), horas_previstas: Number((data as any).horas_previstas ?? 0), ativo: data.ativo };
   }
   const { data, error } = await supabase.from('planos').insert(payload).select().single();
   if (error) throw error;
-  return { id: data.id, nome: data.nome, descricao: data.descricao ?? '', valor_previsto: Number((data as any).valor_previsto ?? 0), ativo: data.ativo };
+  return { id: data.id, nome: data.nome, descricao: data.descricao ?? '', valor_previsto: Number((data as any).valor_previsto ?? 0), horas_previstas: Number((data as any).horas_previstas ?? 0), ativo: data.ativo };
 }
 
 export async function deletePlano(id: string) {

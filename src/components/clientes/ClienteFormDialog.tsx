@@ -1,11 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Cliente } from '@/types';
 import { toast } from 'sonner';
+
+const ESPECIALIDADES = [
+  'Psicologia', 'Psiquiatria', 'Nutrição', 'Fonoaudiologia', 'Fisioterapia',
+  'Terapia Ocupacional', 'Neuropsicologia', 'Pedagogia', 'Psicopedagogia',
+  'Coaching', 'Mentoria', 'Advocacia', 'Contabilidade', 'Consultoria',
+  'Arquitetura', 'Design', 'Marketing', 'Tecnologia', 'Medicina',
+  'Odontologia', 'Enfermagem', 'Acupuntura', 'Pilates', 'Yoga',
+];
 
 interface Props {
   open: boolean;
@@ -21,6 +33,8 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSave }: Props
     data_nascimento: '', telefone: '', email: '', endereco_completo: '', chave_pix: '', observacao: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [espOpen, setEspOpen] = useState(false);
+  const [espSearch, setEspSearch] = useState('');
 
   useEffect(() => {
     if (cliente) {
@@ -35,6 +49,7 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSave }: Props
       setForm({ cpf_cnpj: '', rg_inscricao_estadual: '', nome_razao_social: '', especialidade: '', data_nascimento: '', telefone: '', email: '', endereco_completo: '', chave_pix: '', observacao: '' });
     }
     setErrors({});
+    setEspSearch('');
   }, [cliente, open]);
 
   function validate() {
@@ -62,6 +77,8 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSave }: Props
 
   const f = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
+  const filteredEspecialidades = ESPECIALIDADES.filter(e => e.toLowerCase().includes(espSearch.toLowerCase()));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -85,7 +102,43 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSave }: Props
           </div>
           <div className="space-y-2">
             <Label>Especialidade</Label>
-            <Input value={form.especialidade} onChange={e => f('especialidade', e.target.value)} />
+            <Popover open={espOpen} onOpenChange={setEspOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={espOpen} className="w-full justify-between font-normal">
+                  {form.especialidade || 'Selecione ou digite...'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Buscar especialidade..." value={espSearch} onValueChange={setEspSearch} />
+                  <CommandList>
+                    <CommandEmpty>
+                      {espSearch.trim() ? (
+                        <button
+                          className="w-full px-3 py-2 text-sm text-left hover:bg-accent rounded"
+                          onClick={() => { f('especialidade', espSearch.trim()); setEspOpen(false); }}
+                        >
+                          Usar "{espSearch.trim()}"
+                        </button>
+                      ) : 'Nenhuma encontrada.'}
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {filteredEspecialidades.map(esp => (
+                        <CommandItem
+                          key={esp}
+                          value={esp}
+                          onSelect={() => { f('especialidade', esp); setEspOpen(false); }}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", form.especialidade === esp ? "opacity-100" : "opacity-0")} />
+                          {esp}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-2">
             <Label>Data de Nascimento</Label>

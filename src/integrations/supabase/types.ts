@@ -327,6 +327,7 @@ export type Database = {
           ativo: boolean
           created_at: string
           descricao: string | null
+          horas_previstas: number
           id: string
           nome: string
           updated_at: string
@@ -335,6 +336,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           descricao?: string | null
+          horas_previstas?: number
           id?: string
           nome: string
           updated_at?: string
@@ -343,6 +345,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           descricao?: string | null
+          horas_previstas?: number
           id?: string
           nome?: string
           updated_at?: string
@@ -353,6 +356,7 @@ export type Database = {
         Row: {
           approved: boolean
           created_at: string
+          email: string
           full_name: string
           id: string
           updated_at: string
@@ -361,6 +365,7 @@ export type Database = {
         Insert: {
           approved?: boolean
           created_at?: string
+          email?: string
           full_name?: string
           id?: string
           updated_at?: string
@@ -369,6 +374,7 @@ export type Database = {
         Update: {
           approved?: boolean
           created_at?: string
+          email?: string
           full_name?: string
           id?: string
           updated_at?: string
