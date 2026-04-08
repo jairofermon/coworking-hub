@@ -30,8 +30,8 @@ export default function AgendamentosPage() {
 
   async function loadData() {
     try {
-      const [ag, cl, sl, ct] = await Promise.all([fetchAgendamentos(), fetchClientes(), fetchSalas(), fetchContratos()]);
-      setAgendamentos(ag); setClientes(cl); setSalas(sl); setContratos(ct);
+      const [ag, cl, sl, ct, pl] = await Promise.all([fetchAgendamentos(), fetchClientes(), fetchSalas(), fetchContratos(), fetchPlanos()]);
+      setAgendamentos(ag); setClientes(cl); setSalas(sl); setContratos(ct); setPlanos(pl);
     } catch (e: any) { toast.error('Erro: ' + e.message); } finally { setLoading(false); }
   }
 
