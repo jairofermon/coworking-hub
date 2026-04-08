@@ -10,7 +10,7 @@ export interface Sala {
 export interface DisponibilidadeSala {
   id: string;
   sala_id: string;
-  dia_semana: number; // 0=Dom, 1=Seg...6=Sab
+  dia_semana: number;
   hora_inicio: string;
   hora_fim: string;
   ativo: boolean;
@@ -37,6 +37,7 @@ export interface Plano {
   nome: string;
   descricao: string;
   valor_previsto: number;
+  horas_previstas: number;
   ativo: boolean;
 }
 
