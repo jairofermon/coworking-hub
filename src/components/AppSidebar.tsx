@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   DoorOpen,
@@ -14,10 +15,12 @@ import {
   UserCircle,
   Receipt,
   ClipboardList,
+  UserPlus,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar,
   SidebarContent,
@@ -51,6 +54,21 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (!user?.isAdmin) return;
+    async function fetchPending() {
+      const { count } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('approved', false);
+      setPendingCount(count ?? 0);
+    }
+    fetchPending();
+    const interval = setInterval(fetchPending, 30000);
+    return () => clearInterval(interval);
+  }, [user?.isAdmin]);
 
   return (
     <Sidebar collapsible="icon">
@@ -137,6 +155,28 @@ export function AppSidebar() {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/admin/usuarios" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
+                      <UserPlus className="mr-2 h-4 w-4 shrink-0" />
+                      {!collapsed && (
+                        <span className="flex items-center gap-2">
+                          Usuários
+                          {pendingCount > 0 && (
+                            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1">
+                              {pendingCount}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {collapsed && pendingCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-0.5">
+                          {pendingCount}
+                        </span>
+                      )}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
                     <NavLink to="/admin/auditoria" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
