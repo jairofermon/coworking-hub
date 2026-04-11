@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   DoorOpen,
@@ -14,10 +15,12 @@ import {
   UserCircle,
   Receipt,
   ClipboardList,
+  UserPlus,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar,
   SidebarContent,
