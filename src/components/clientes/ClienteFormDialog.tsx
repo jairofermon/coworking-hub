@@ -164,6 +164,17 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSave }: Props
             <Label>Chave PIX</Label>
             <Input value={form.chave_pix} onChange={e => f('chave_pix', e.target.value)} />
           </div>
+          <div className="space-y-2">
+            <Label>Status Funil</Label>
+            <Select value={form.status_funil} onValueChange={v => f('status_funil', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="lead">Lead</SelectItem>
+                <SelectItem value="free">Free</SelectItem>
+                <SelectItem value="pago">Pago</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>Observação</Label>
             <Textarea value={form.observacao} onChange={e => f('observacao', e.target.value)} rows={2} />
