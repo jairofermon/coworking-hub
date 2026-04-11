@@ -21,6 +21,7 @@ import FaturasPage from "./pages/FaturasPage";
 import LogsPage from "./pages/LogsPage";
 import UsuariosPage from "./pages/UsuariosPage";
 import NotFound from "./pages/NotFound";
+import AuthCallback from "./pages/AuthCallback";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
