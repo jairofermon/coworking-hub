@@ -224,26 +224,27 @@ export default function ContratosPage() {
                   <TableCell>R$ {ct.valor_liquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-muted-foreground text-sm whitespace-nowrap">{new Date(ct.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')} — {new Date(ct.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell><StatusBadge status={ct.status} /></TableCell>
-                  <TableCell />
-                  {!isCliente && (
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setEditing(ct); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => {
-                            const cl = clientes.find(c => c.id === ct.cliente_id);
-                            const sl = salas.find(s => s.id === ct.sala_id);
-                            const pl = planos.find(p => p.id === ct.plano_id);
-                            const fp = formas.find(f => f.id === ct.forma_pagamento_id);
-                            if (cl && sl && pl && fp) generateContratoPdf(ct, cl, sl, pl, fp);
-                          }}><FileText className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ct); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  )}
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {!isCliente && <DropdownMenuItem onClick={() => { setEditing(ct); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>}
+                        <DropdownMenuItem onClick={() => {
+                          const cl = clientes.find(c => c.id === ct.cliente_id);
+                          const sl = salas.find(s => s.id === ct.sala_id);
+                          const pl = planos.find(p => p.id === ct.plano_id);
+                          const fp = formas.find(f => f.id === ct.forma_pagamento_id);
+                          if (cl && sl && pl && fp) generateContratoPdf(ct, cl, sl, pl, fp);
+                        }}><FileText className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
+                        {!isCliente && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ct); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               );
             })}

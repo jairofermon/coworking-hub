@@ -142,8 +142,7 @@ export default function AgendamentosPage() {
     <div className="page-container">
       <PageHeader
         titulo="Agendamentos"
-        subtitulo={isCliente ? "Visualize e crie seus agendamentos" : "Gerencie reservas e horários das salas"}
-        acaoPrincipal={{ label: 'Novo Agendamento', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } }}
+        subtitulo={isCliente ? "Visualize seus agendamentos" : "Gerencie reservas e horários das salas"}
       />
 
       <FilterBar placeholder="Buscar por cliente, sala ou data..." value={busca} onChange={setBusca}>
