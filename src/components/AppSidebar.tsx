@@ -156,7 +156,7 @@ export function AppSidebar() {
         {/* Incomplete client registrations notification */}
         {!isCliente && incompleteClientCount > 0 && (
           <div className="px-3 pt-2">
-            <NavLink to="/clientes" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
+            <NavLink to="/clientes?filtro=incompleto" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
               <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs">
                 <Users className="h-4 w-4 text-warning shrink-0" />
                 {!collapsed && (
