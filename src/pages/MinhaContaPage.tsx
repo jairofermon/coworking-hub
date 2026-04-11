@@ -75,9 +75,13 @@ export default function MinhaContaPage() {
     try {
       const { error } = await supabase.from('profiles').update({ full_name: editName.trim() }).eq('user_id', currentUser!.id);
       if (error) throw error;
-      toast.success('Nome atualizado com sucesso!');
       // Also update auth metadata
       await supabase.auth.updateUser({ data: { full_name: editName.trim() } });
+      // If client, also update nome_razao_social in clientes table
+      if (currentUser!.isCliente && currentUser!.clienteId) {
+        await supabase.from('clientes').update({ nome_razao_social: editName.trim() }).eq('id', currentUser!.clienteId);
+      }
+      toast.success('Nome atualizado com sucesso!');
     } catch (e: any) { toast.error(e.message); }
     finally { setSavingName(false); }
   }
