@@ -30,6 +30,7 @@ function formatWhatsAppLink(telefone: string): string | null {
 }
 
 export default function ClientesPage() {
+  const navigate = useNavigate();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(true);
