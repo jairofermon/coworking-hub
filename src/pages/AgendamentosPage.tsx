@@ -154,7 +154,7 @@ export default function AgendamentosPage() {
           <Table>
             {tableHeader}
             <TableBody>
-              {futuros.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-6">Nenhum agendamento futuro.</TableCell></TableRow>}
+              {futuros.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Nenhum agendamento futuro.</TableCell></TableRow>}
               {futuros.map(renderRow)}
             </TableBody>
           </Table>
