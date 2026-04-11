@@ -40,6 +40,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
+  const [incompleteClientCount, setIncompleteClientCount] = useState(0);
 
   const isAdmin = user?.isAdmin ?? false;
   const isCliente = user?.isCliente ?? false;
@@ -57,6 +58,24 @@ export function AppSidebar() {
     const interval = setInterval(fetchPending, 30000);
     return () => clearInterval(interval);
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (isCliente) return;
+    async function fetchIncomplete() {
+      const { data } = await supabase
+        .from('clientes')
+        .select('id, cpf_cnpj, telefone, email, endereco_completo');
+      if (data) {
+        const incomplete = data.filter(c =>
+          !c.cpf_cnpj || !c.telefone || !c.email || !c.endereco_completo
+        );
+        setIncompleteClientCount(incomplete.length);
+      }
+    }
+    fetchIncomplete();
+    const interval = setInterval(fetchIncomplete, 30000);
+    return () => clearInterval(interval);
+  }, [isCliente]);
 
   // Build menu items based on role
   const mainItems = [
