@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PageHeader } from '@/components/PageHeader';
 import { FilterBar } from '@/components/FilterBar';
 import { EmptyState } from '@/components/EmptyState';
@@ -55,6 +55,7 @@ type SortField = 'nome_razao_social' | 'status_funil' | 'especialidade';
 
 export default function ClientesPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
@@ -64,7 +65,7 @@ export default function ClientesPage() {
   const [editing, setEditing] = useState<Cliente | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState<Cliente | null>(null);
-  const [filtroFunil, setFiltroFunil] = useState('all');
+  const [filtroFunil, setFiltroFunil] = useState(() => searchParams.get('filtro') || 'all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [sortField, setSortField] = useState<SortField>('nome_razao_social');
