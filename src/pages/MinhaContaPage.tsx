@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, CheckCircle, XCircle, ShieldCheck, ShieldOff, Trash2, Loader2, Lock, Save } from 'lucide-react';
+import { MoreHorizontal, CheckCircle, XCircle, ShieldCheck, ShieldOff, Trash2, Loader2, Lock, Save, UserCheck, Users2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +20,8 @@ interface UserRow {
   email: string;
   approved: boolean;
   isAdmin: boolean;
+  isCliente: boolean;
+  hasClienteRecord: boolean;
 }
 
 export default function MinhaContaPage() {
@@ -30,7 +32,6 @@ export default function MinhaContaPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Editable name
   const [editName, setEditName] = useState(currentUser?.fullName ?? '');
   const [savingName, setSavingName] = useState(false);
 
@@ -50,17 +51,28 @@ export default function MinhaContaPage() {
   async function loadUsers() {
     setLoadingUsers(true);
     try {
-      const { data: profiles, error } = await supabase.from('profiles').select('user_id, full_name, email, approved');
-      if (error) throw error;
-      const { data: roles } = await supabase.from('user_roles').select('user_id, role');
+      const [profilesResult, rolesResult, clientesResult] = await Promise.all([
+        supabase.from('profiles').select('user_id, full_name, email, approved'),
+        supabase.from('user_roles').select('user_id, role'),
+        supabase.from('clientes').select('id, user_id'),
+      ]);
 
-      const userRows: UserRow[] = (profiles ?? []).map((p: any) => ({
+      if (profilesResult.error) throw profilesResult.error;
+
+      const profiles = profilesResult.data ?? [];
+      const roles = rolesResult.data ?? [];
+      const clientes = clientesResult.data ?? [];
+
+      const userRows: UserRow[] = profiles.map((p: any) => ({
         user_id: p.user_id,
         full_name: p.full_name || '(sem nome)',
         email: p.email || '',
         approved: p.approved,
-        isAdmin: roles?.some((r: any) => r.user_id === p.user_id && r.role === 'admin') ?? false,
+        isAdmin: roles.some((r: any) => r.user_id === p.user_id && r.role === 'admin'),
+        isCliente: roles.some((r: any) => r.user_id === p.user_id && r.role === 'cliente'),
+        hasClienteRecord: clientes.some((c: any) => c.user_id === p.user_id),
       }));
+
       setUsers(userRows);
     } catch (e: any) {
       toast.error('Erro ao carregar usuários: ' + e.message);
@@ -75,9 +87,7 @@ export default function MinhaContaPage() {
     try {
       const { error } = await supabase.from('profiles').update({ full_name: editName.trim() }).eq('user_id', currentUser!.id);
       if (error) throw error;
-      // Also update auth metadata
       await supabase.auth.updateUser({ data: { full_name: editName.trim() } });
-      // If client, also update nome_razao_social in clientes table
       if (currentUser!.isCliente && currentUser!.clienteId) {
         await supabase.from('clientes').update({ nome_razao_social: editName.trim() }).eq('id', currentUser!.clienteId);
       }
@@ -114,6 +124,40 @@ export default function MinhaContaPage() {
     } catch (e: any) { toast.error(e.message); }
   }
 
+  async function handleSetRole(u: UserRow, targetRole: 'user' | 'cliente') {
+    try {
+      const { error: deleteError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', u.user_id)
+        .neq('role', 'admin');
+
+      if (deleteError) throw deleteError;
+
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert({ user_id: u.user_id, role: targetRole });
+
+      if (insertError) throw insertError;
+
+      if (targetRole === 'cliente' && !u.hasClienteRecord) {
+        const { error: clienteError } = await supabase.from('clientes').insert({
+          nome_razao_social: u.full_name || u.email,
+          email: u.email,
+          user_id: u.user_id,
+        });
+
+        if (clienteError) throw clienteError;
+      }
+
+      await logAudit(targetRole === 'cliente' ? 'definir_como_cliente' : 'definir_como_usuario', 'usuario', u.user_id, { email: u.email });
+      toast.success(targetRole === 'cliente' ? `${u.full_name} definido como Cliente` : `${u.full_name} definido como Usuário`);
+      await loadUsers();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  }
+
   async function handleToggleAdmin(u: UserRow) {
     try {
       if (u.isAdmin) {
@@ -139,6 +183,12 @@ export default function MinhaContaPage() {
       toast.success('Usuário removido');
       await loadUsers();
     } catch (e: any) { toast.error(e.message); }
+  }
+
+  function getRoleBadge(u: UserRow) {
+    if (u.isAdmin) return <Badge variant="default">Admin</Badge>;
+    if (u.isCliente) return <Badge variant="secondary">Cliente</Badge>;
+    return <Badge variant="outline">Usuário</Badge>;
   }
 
   const roleBadge = currentUser?.isAdmin
@@ -224,15 +274,20 @@ export default function MinhaContaPage() {
                           : <Badge variant="secondary">Pendente</Badge>
                         }
                       </TableCell>
-                      <TableCell>
-                        {u.isAdmin ? <Badge variant="default">Admin</Badge> : <Badge variant="outline">Usuário</Badge>}
-                      </TableCell>
+                      <TableCell>{getRoleBadge(u)}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleToggleApproval(u)}>
                               {u.approved ? <><XCircle className="mr-2 h-4 w-4" /> Bloquear acesso</> : <><CheckCircle className="mr-2 h-4 w-4" /> Aprovar</>}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleSetRole(u, 'user')}>
+                              <Users2 className="mr-2 h-4 w-4" /> Definir como Usuário
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleSetRole(u, 'cliente')}>
+                              <UserCheck className="mr-2 h-4 w-4" /> Definir como Cliente
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleToggleAdmin(u)}>
                               {u.isAdmin ? <><ShieldOff className="mr-2 h-4 w-4" /> Rebaixar p/ usuário</> : <><ShieldCheck className="mr-2 h-4 w-4" /> Promover a admin</>}
