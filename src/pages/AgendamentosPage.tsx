@@ -1,12 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { FilterBar } from '@/components/FilterBar';
 import { StatusBadge } from '@/components/StatusBadge';
+import { EmptyState } from '@/components/EmptyState';
+import { LoadingState } from '@/components/LoadingState';
+import { TablePagination } from '@/components/TablePagination';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, FileText, LogIn, LogOut } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, FileText, LogIn, LogOut, CalendarDays, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Agendamento, Cliente, Sala, Contrato, Plano, DisponibilidadeSala } from '@/types';
 import { AgendamentoFormDialog } from '@/components/agendamentos/AgendamentoFormDialog';
@@ -14,7 +19,13 @@ import { AgendamentoDeleteDialog } from '@/components/agendamentos/AgendamentoDe
 import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos, fetchPlanos, fetchDisponibilidades, checkinAgendamento, checkoutAgendamento } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import { generateAgendamentoPdf } from '@/lib/pdf';
-import { Separator } from '@/components/ui/separator';
+
+const STATUS_FILTERS = [
+  { value: 'all', label: 'Todos' },
+  { value: 'pendente', label: 'Pendentes' },
+  { value: 'confirmado', label: 'Confirmados' },
+  { value: 'cancelado', label: 'Cancelados' },
+];
 
 export default function AgendamentosPage() {
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
@@ -29,40 +40,52 @@ export default function AgendamentosPage() {
   const [editing, setEditing] = useState<Agendamento | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState<Agendamento | null>(null);
+  const [filtroStatus, setFiltroStatus] = useState('all');
+  const [filtroSala, setFiltroSala] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   async function loadData() {
     try {
       const [ag, cl, sl, ct, pl, dp] = await Promise.all([fetchAgendamentos(), fetchClientes(), fetchSalas(), fetchContratos(), fetchPlanos(), fetchDisponibilidades()]);
       setAgendamentos(ag); setClientes(cl); setSalas(sl); setContratos(ct); setPlanos(pl); setDisponibilidades(dp);
-    } catch (e: any) { toast.error('Erro: ' + e.message); } finally { setLoading(false); }
+    } catch (e: any) { toast.error('Erro ao carregar agendamentos: ' + e.message); }
+    finally { setLoading(false); }
   }
 
   useEffect(() => { loadData(); }, []);
 
-  const filtered = agendamentos.filter(ag => {
-    const cliente = clientes.find(c => c.id === ag.cliente_id);
-    const sala = salas.find(s => s.id === ag.sala_id);
-    return cliente?.nome_razao_social.toLowerCase().includes(busca.toLowerCase()) || sala?.nome.toLowerCase().includes(busca.toLowerCase()) || ag.data.includes(busca);
-  });
-
   const today = new Date().toISOString().split('T')[0];
-  const now = new Date().toTimeString().slice(0, 5);
 
-  const futuros = filtered
-    .filter(ag => ag.data > today || (ag.data === today && ag.hora_fim >= now))
-    .sort((a, b) => a.data.localeCompare(b.data) || a.hora_inicio.localeCompare(b.hora_inicio));
+  const filtered = useMemo(() => {
+    return agendamentos
+      .filter(ag => {
+        if (filtroStatus !== 'all' && ag.status !== filtroStatus) return false;
+        if (filtroSala !== 'all' && ag.sala_id !== filtroSala) return false;
+        if (!busca) return true;
+        const q = busca.toLowerCase();
+        const cliente = clientes.find(c => c.id === ag.cliente_id);
+        const sala = salas.find(s => s.id === ag.sala_id);
+        return (cliente?.nome_razao_social.toLowerCase().includes(q)) || (sala?.nome.toLowerCase().includes(q)) || ag.data.includes(busca);
+      })
+      .sort((a, b) => b.data.localeCompare(a.data) || b.hora_inicio.localeCompare(a.hora_inicio));
+  }, [agendamentos, busca, filtroStatus, filtroSala, clientes, salas]);
 
-  const passados = filtered
-    .filter(ag => ag.data < today || (ag.data === today && ag.hora_fim < now))
-    .sort((a, b) => b.data.localeCompare(a.data) || b.hora_inicio.localeCompare(a.hora_inicio));
+  const paginated = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
+
+  useEffect(() => { setPage(1); }, [busca, filtroStatus, filtroSala]);
 
   async function handleSave(ag: Agendamento) {
     try {
       const isNew = !ag.id;
       const saved = await upsertAgendamento(ag);
       await logAudit(isNew ? 'criar' : 'editar', 'agendamento', saved.id, { data: saved.data, hora: saved.hora_inicio });
+      toast.success(isNew ? 'Agendamento criado com sucesso!' : 'Agendamento atualizado.');
       await loadData();
-    } catch (e: any) { toast.error('Erro: ' + e.message); }
+    } catch (e: any) { toast.error('Erro ao salvar: ' + e.message); }
   }
 
   async function handleDelete() {
@@ -70,111 +93,137 @@ export default function AgendamentosPage() {
     try {
       await deleteAgendamento(deleting.id);
       await logAudit('excluir', 'agendamento', deleting.id, { data: deleting.data });
-      toast.success('Agendamento excluído');
+      toast.success('Agendamento excluído com sucesso.');
       setDeleteOpen(false); setDeleting(null); await loadData();
-    } catch (e: any) { toast.error('Erro: ' + e.message); }
+    } catch (e: any) { toast.error('Erro ao excluir: ' + e.message); }
   }
 
-  if (loading) return <div className="page-container flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
-
-  function renderRow(ag: Agendamento) {
-    const cliente = clientes.find(c => c.id === ag.cliente_id);
-    const sala = salas.find(s => s.id === ag.sala_id);
-    const contrato = contratos.find(c => c.id === ag.contrato_id);
-    return (
-      <TableRow key={ag.id}>
-        <TableCell className="font-medium">{new Date(ag.data + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
-        <TableCell>
-          <div className="flex items-center gap-2">
-            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: sala?.cor_identificacao }} />
-            {sala?.nome}
-          </div>
-        </TableCell>
-        <TableCell>{cliente?.nome_razao_social}</TableCell>
-        <TableCell className="font-mono text-xs">{contrato?.codigo || '—'}</TableCell>
-        <TableCell className="text-muted-foreground">{ag.hora_inicio} - {ag.hora_fim}</TableCell>
-        <TableCell><StatusBadge status={ag.status} /></TableCell>
-        <TableCell className="text-xs text-muted-foreground">
-          {ag.checkin_at ? <span className="text-green-600">In: {new Date(ag.checkin_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span> : '—'}
-          {' '}
-          {ag.checkout_at ? <span className="text-primary">Out: {new Date(ag.checkout_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span> : ''}
-        </TableCell>
-        <TableCell className="text-muted-foreground text-sm">{ag.observacao || '—'}</TableCell>
-        <TableCell>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-              {!ag.checkin_at && ag.status !== 'cancelado' && (
-                <DropdownMenuItem onClick={async () => { try { await checkinAgendamento(ag.id); toast.success('Check-in registrado!'); await loadData(); } catch (e: any) { toast.error(e.message); } }}><LogIn className="mr-2 h-4 w-4" /> Check-in</DropdownMenuItem>
-              )}
-              {ag.checkin_at && !ag.checkout_at && (
-                <DropdownMenuItem onClick={async () => { try { await checkoutAgendamento(ag.id); toast.success('Check-out registrado!'); await loadData(); } catch (e: any) { toast.error(e.message); } }}><LogOut className="mr-2 h-4 w-4" /> Check-out</DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={() => {
-                const cl = clientes.find(c => c.id === ag.cliente_id);
-                const sl = salas.find(s => s.id === ag.sala_id);
-                const ct = contratos.find(c => c.id === ag.contrato_id);
-                const pl = ct ? planos.find(p => p.id === ct.plano_id) : null;
-                if (cl && sl) generateAgendamentoPdf(ag, cl, sl, ct, pl);
-              }}><FileText className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ag); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </TableCell>
-      </TableRow>
-    );
+  async function handleCheckin(ag: Agendamento) {
+    try {
+      await checkinAgendamento(ag.id);
+      toast.success('Check-in registrado!');
+      await loadData();
+    } catch (e: any) { toast.error('Erro no check-in: ' + e.message); }
   }
 
-  const tableHeader = (
-    <TableHeader>
-      <TableRow>
-        <TableHead>Data</TableHead>
-        <TableHead>Sala</TableHead>
-        <TableHead>Cliente</TableHead>
-        <TableHead>Contrato</TableHead>
-        <TableHead>Horário</TableHead>
-        <TableHead>Status</TableHead>
-        <TableHead>Presença</TableHead>
-        <TableHead>Observação</TableHead>
-        <TableHead className="w-12" />
-      </TableRow>
-    </TableHeader>
-  );
+  async function handleCheckout(ag: Agendamento) {
+    try {
+      await checkoutAgendamento(ag.id);
+      toast.success('Check-out registrado!');
+      await loadData();
+    } catch (e: any) { toast.error('Erro no check-out: ' + e.message); }
+  }
+
+  if (loading) return <LoadingState />;
 
   return (
     <div className="page-container">
       <PageHeader titulo="Agendamentos" subtitulo="Gerencie reservas e horários das salas" acaoPrincipal={{ label: 'Novo Agendamento', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } }} />
-      <FilterBar placeholder="Buscar por cliente, sala ou data..." value={busca} onChange={setBusca} />
 
-      <div className="space-y-1">
-        <h3 className="text-sm font-semibold text-foreground">Próximos agendamentos</h3>
-        <Card>
-          <Table>
-            {tableHeader}
-            <TableBody>
-              {futuros.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Nenhum agendamento futuro.</TableCell></TableRow>}
-              {futuros.map(renderRow)}
-            </TableBody>
-          </Table>
-        </Card>
-      </div>
-
-      {passados.length > 0 && (
-        <div className="space-y-1 mt-6">
-          <Separator className="mb-4" />
-          <h3 className="text-sm font-semibold text-muted-foreground">Agendamentos passados</h3>
-          <Card>
-            <Table>
-              {tableHeader}
-              <TableBody>
-                {passados.map(renderRow)}
-              </TableBody>
-            </Table>
-          </Card>
+      <FilterBar placeholder="Buscar por cliente, sala ou data..." value={busca} onChange={setBusca}>
+        <div className="flex gap-1">
+          {STATUS_FILTERS.map(f => (
+            <Button key={f.value} variant={filtroStatus === f.value ? 'default' : 'outline'} size="sm" className="h-8 text-xs" onClick={() => setFiltroStatus(f.value)}>
+              {f.label}
+            </Button>
+          ))}
         </div>
-      )}
+        <Select value={filtroSala} onValueChange={setFiltroSala}>
+          <SelectTrigger className="w-[160px] h-8 text-xs"><SelectValue placeholder="Todas as salas" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as salas</SelectItem>
+            {salas.filter(s => s.ativo).map(s => (
+              <SelectItem key={s.id} value={s.id}>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.cor_identificacao }} />
+                  {s.nome}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FilterBar>
+
+      <Card>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Data</TableHead>
+              <TableHead>Sala</TableHead>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Contrato</TableHead>
+              <TableHead>Horário</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Presença</TableHead>
+              <TableHead>Observação</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginated.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={9}>
+                  <EmptyState icon={CalendarDays} titulo="Nenhum agendamento encontrado" descricao={busca ? 'Tente alterar os termos de busca.' : 'Clique em "Novo Agendamento" para começar.'} />
+                </TableCell>
+              </TableRow>
+            )}
+            {paginated.map(ag => {
+              const cliente = clientes.find(c => c.id === ag.cliente_id);
+              const sala = salas.find(s => s.id === ag.sala_id);
+              const contrato = contratos.find(c => c.id === ag.contrato_id);
+              const isPast = ag.data < today;
+              return (
+                <TableRow key={ag.id} className={isPast ? 'opacity-60' : ''}>
+                  <TableCell className="font-medium whitespace-nowrap">{new Date(ag.data + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: sala?.cor_identificacao }} />
+                      {sala?.nome}
+                    </div>
+                  </TableCell>
+                  <TableCell>{cliente?.nome_razao_social}</TableCell>
+                  <TableCell className="font-mono text-xs">{contrato?.codigo || '—'}</TableCell>
+                  <TableCell className="text-muted-foreground whitespace-nowrap">{ag.hora_inicio} – {ag.hora_fim}</TableCell>
+                  <TableCell><StatusBadge status={ag.status} /></TableCell>
+                  <TableCell className="text-xs">
+                    <div className="flex flex-col gap-0.5">
+                      {ag.checkin_at ? <span className="text-success font-medium">In: {new Date(ag.checkin_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span> : <span className="text-muted-foreground">—</span>}
+                      {ag.checkout_at && <span className="text-primary font-medium">Out: {new Date(ag.checkout_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm max-w-[150px] truncate">{ag.observacao || '—'}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                        {!ag.checkin_at && ag.status !== 'cancelado' && (
+                          <DropdownMenuItem onClick={() => handleCheckin(ag)}><LogIn className="mr-2 h-4 w-4" /> Check-in</DropdownMenuItem>
+                        )}
+                        {ag.checkin_at && !ag.checkout_at && (
+                          <DropdownMenuItem onClick={() => handleCheckout(ag)}><LogOut className="mr-2 h-4 w-4" /> Check-out</DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => {
+                          const cl = clientes.find(c => c.id === ag.cliente_id);
+                          const sl = salas.find(s => s.id === ag.sala_id);
+                          const ct = contratos.find(c => c.id === ag.contrato_id);
+                          const pl = ct ? planos.find(p => p.id === ct.plano_id) : null;
+                          if (cl && sl) generateAgendamentoPdf(ag, cl, sl, ct, pl);
+                        }}><FileText className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ag); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+        {filtered.length > 0 && (
+          <TablePagination page={page} totalItems={filtered.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+        )}
+      </Card>
 
       <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientes} salas={salas} contratos={contratos} agendamentos={agendamentos} planos={planos} disponibilidades={disponibilidades} />
       <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
