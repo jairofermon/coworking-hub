@@ -18,6 +18,7 @@ import MinhaContaPage from "./pages/MinhaContaPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import ClienteDetalhePage from "./pages/ClienteDetalhePage";
 import FaturasPage from "./pages/FaturasPage";
+import LogsPage from "./pages/LogsPage";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
