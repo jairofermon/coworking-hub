@@ -133,6 +133,7 @@ export type Database = {
           status_funil: string
           telefone: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           chave_pix?: string | null
@@ -149,6 +150,7 @@ export type Database = {
           status_funil?: string
           telefone?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           chave_pix?: string | null
@@ -165,6 +167,7 @@ export type Database = {
           status_funil?: string
           telefone?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
