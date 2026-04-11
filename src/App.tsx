@@ -56,7 +56,13 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
 
 function RequireNotCliente({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  if (user?.isCliente) return <Navigate to="/" replace />;
+  if (user?.isCliente) return <Navigate to="/agendamentos" replace />;
+  return <>{children}</>;
+}
+
+function ClienteRedirect({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user?.isCliente) return <Navigate to="/agendamentos" replace />;
   return <>{children}</>;
 }
 
@@ -65,7 +71,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<RequireAuth><AdminLayout /></RequireAuth>}>
-        <Route path="/" element={<DashboardPage />} />
+        <Route path="/" element={<ClienteRedirect><DashboardPage /></ClienteRedirect>} />
         <Route path="/salas" element={<SalasPage />} />
         <Route path="/clientes" element={<RequireNotCliente><ClientesPage /></RequireNotCliente>} />
         <Route path="/clientes/:id" element={<RequireNotCliente><ClienteDetalhePage /></RequireNotCliente>} />

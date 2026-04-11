@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, CheckCircle, XCircle, ShieldCheck, ShieldOff, Trash2, Loader2, Lock } from 'lucide-react';
+import { MoreHorizontal, CheckCircle, XCircle, ShieldCheck, ShieldOff, Trash2, Loader2, Lock, Save } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,9 +24,19 @@ interface UserRow {
 
 export default function MinhaContaPage() {
   const { user: currentUser } = useAuth();
+  const isCliente = currentUser?.isCliente ?? false;
+
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+
+  // Editable name
+  const [editName, setEditName] = useState(currentUser?.fullName ?? '');
+  const [savingName, setSavingName] = useState(false);
+
+  useEffect(() => {
+    setEditName(currentUser?.fullName ?? '');
+  }, [currentUser?.fullName]);
 
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -57,6 +67,19 @@ export default function MinhaContaPage() {
     } finally {
       setLoadingUsers(false);
     }
+  }
+
+  async function handleSaveName() {
+    if (!editName.trim()) { toast.error('O nome não pode ficar vazio'); return; }
+    setSavingName(true);
+    try {
+      const { error } = await supabase.from('profiles').update({ full_name: editName.trim() }).eq('user_id', currentUser!.id);
+      if (error) throw error;
+      toast.success('Nome atualizado com sucesso!');
+      // Also update auth metadata
+      await supabase.auth.updateUser({ data: { full_name: editName.trim() } });
+    } catch (e: any) { toast.error(e.message); }
+    finally { setSavingName(false); }
   }
 
   async function handleChangePassword() {
@@ -114,6 +137,12 @@ export default function MinhaContaPage() {
     } catch (e: any) { toast.error(e.message); }
   }
 
+  const roleBadge = currentUser?.isAdmin
+    ? <Badge variant="default">Admin</Badge>
+    : isCliente
+      ? <Badge variant="secondary">Cliente</Badge>
+      : <Badge variant="outline">Usuário</Badge>;
+
   return (
     <div className="page-container">
       <PageHeader titulo="Minha Conta" subtitulo="Gerencie seu perfil e configurações" />
@@ -122,9 +151,14 @@ export default function MinhaContaPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">Meus Dados</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            <div>
+            <div className="space-y-2">
               <Label className="text-muted-foreground text-xs">Nome</Label>
-              <p className="font-medium">{currentUser?.fullName || '(sem nome)'}</p>
+              <div className="flex gap-2">
+                <Input value={editName} onChange={e => setEditName(e.target.value)} />
+                <Button size="sm" onClick={handleSaveName} disabled={savingName || editName === currentUser?.fullName}>
+                  {savingName ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
             <div>
               <Label className="text-muted-foreground text-xs">E-mail</Label>
@@ -132,7 +166,7 @@ export default function MinhaContaPage() {
             </div>
             <div>
               <Label className="text-muted-foreground text-xs">Perfil</Label>
-              <p>{currentUser?.isAdmin ? <Badge variant="default">Admin</Badge> : <Badge variant="outline">Usuário</Badge>}</p>
+              <p>{roleBadge}</p>
             </div>
           </CardContent>
         </Card>

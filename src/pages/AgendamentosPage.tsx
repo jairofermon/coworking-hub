@@ -142,8 +142,8 @@ export default function AgendamentosPage() {
     <div className="page-container">
       <PageHeader
         titulo="Agendamentos"
-        subtitulo={isCliente ? "Visualize e crie seus agendamentos" : "Gerencie reservas e horários das salas"}
-        acaoPrincipal={{ label: 'Novo Agendamento', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } }}
+        subtitulo={isCliente ? "Visualize seus agendamentos" : "Gerencie reservas e horários das salas"}
+        acaoPrincipal={!isCliente ? { label: 'Novo Agendamento', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } } : undefined}
       />
 
       <FilterBar placeholder="Buscar por cliente, sala ou data..." value={busca} onChange={setBusca}>
@@ -182,14 +182,14 @@ export default function AgendamentosPage() {
               <TableHead>Status</TableHead>
               <TableHead>Presença</TableHead>
               <TableHead>Observação</TableHead>
-              {!isCliente && <TableHead className="w-12" />}
+              <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginated.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isCliente ? 8 : 9}>
-                  <EmptyState icon={CalendarDays} titulo="Nenhum agendamento encontrado" descricao={busca ? 'Tente alterar os termos de busca.' : isCliente ? 'Clique em "Novo Agendamento" para agendar.' : 'Clique em "Novo Agendamento" para começar.'} />
+                <TableCell colSpan={9}>
+                  <EmptyState icon={CalendarDays} titulo="Nenhum agendamento encontrado" descricao={busca ? 'Tente alterar os termos de busca.' : isCliente ? 'Você ainda não possui agendamentos.' : 'Clique em "Novo Agendamento" para começar.'} />
                 </TableCell>
               </TableRow>
             )}
@@ -218,31 +218,33 @@ export default function AgendamentosPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm max-w-[150px] truncate">{ag.observacao || '—'}</TableCell>
-                  {!isCliente && (
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                          {!ag.checkin_at && ag.status !== 'cancelado' && (
-                            <DropdownMenuItem onClick={() => handleCheckin(ag)}><LogIn className="mr-2 h-4 w-4" /> Check-in</DropdownMenuItem>
-                          )}
-                          {ag.checkin_at && !ag.checkout_at && (
-                            <DropdownMenuItem onClick={() => handleCheckout(ag)}><LogOut className="mr-2 h-4 w-4" /> Check-out</DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem onClick={() => {
-                            const cl = clientes.find(c => c.id === ag.cliente_id);
-                            const sl = salas.find(s => s.id === ag.sala_id);
-                            const ct = contratos.find(c => c.id === ag.contrato_id);
-                            const pl = ct ? planos.find(p => p.id === ct.plano_id) : null;
-                            if (cl && sl) generateAgendamentoPdf(ag, cl, sl, ct, pl);
-                          }}><FileText className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ag); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  )}
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {!isCliente && <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>}
+                        {!ag.checkin_at && ag.status !== 'cancelado' && (
+                          <DropdownMenuItem onClick={() => handleCheckin(ag)}><LogIn className="mr-2 h-4 w-4" /> Check-in</DropdownMenuItem>
+                        )}
+                        {ag.checkin_at && !ag.checkout_at && (
+                          <DropdownMenuItem onClick={() => handleCheckout(ag)}><LogOut className="mr-2 h-4 w-4" /> Check-out</DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => {
+                          const cl = clientes.find(c => c.id === ag.cliente_id);
+                          const sl = salas.find(s => s.id === ag.sala_id);
+                          const ct = contratos.find(c => c.id === ag.contrato_id);
+                          const pl = ct ? planos.find(p => p.id === ct.plano_id) : null;
+                          if (cl && sl) generateAgendamentoPdf(ag, cl, sl, ct, pl);
+                        }}><FileText className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
+                        {!isCliente && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ag); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               );
             })}
@@ -253,8 +255,12 @@ export default function AgendamentosPage() {
         )}
       </Card>
 
-      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientesForForm} salas={salas} contratos={contratosForForm} agendamentos={agendamentos} planos={planos} disponibilidades={disponibilidades} />
-      {!isCliente && <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />}
+      {!isCliente && (
+        <>
+          <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientesForForm} salas={salas} contratos={contratosForForm} agendamentos={agendamentos} planos={planos} disponibilidades={disponibilidades} />
+          <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
+        </>
+      )}
     </div>
   );
 }

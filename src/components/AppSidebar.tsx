@@ -60,7 +60,7 @@ export function AppSidebar() {
 
   // Build menu items based on role
   const mainItems = [
-    { title: 'Dashboard', url: '/', icon: LayoutDashboard, show: true },
+    { title: 'Dashboard', url: '/', icon: LayoutDashboard, show: !isCliente },
     { title: 'Salas', url: '/salas', icon: DoorOpen, show: true },
     { title: 'Clientes', url: '/clientes', icon: Users, show: !isCliente },
     { title: 'Contratos', url: '/contratos', icon: FileText, show: true },
