@@ -65,10 +65,10 @@ async function loadAuthUser(user: User): Promise<AuthUser> {
   if (isCliente) {
     const { data: cliente } = await supabase
       .from('clientes')
-      .select('id')
-      .eq('user_id' as any, user.id)
+      .select('id, user_id')
+      .eq('user_id', user.id)
       .maybeSingle();
-    clienteId = cliente?.id ?? null;
+    clienteId = (cliente as any)?.id ?? null;
   }
 
   return {
