@@ -19,6 +19,7 @@ import AuditLogPage from "./pages/AuditLogPage";
 import ClienteDetalhePage from "./pages/ClienteDetalhePage";
 import FaturasPage from "./pages/FaturasPage";
 import LogsPage from "./pages/LogsPage";
+import UsuariosPage from "./pages/UsuariosPage";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -53,6 +54,12 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RequireNotCliente({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user?.isCliente) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -60,8 +67,8 @@ function AppRoutes() {
       <Route element={<RequireAuth><AdminLayout /></RequireAuth>}>
         <Route path="/" element={<DashboardPage />} />
         <Route path="/salas" element={<SalasPage />} />
-        <Route path="/clientes" element={<ClientesPage />} />
-        <Route path="/clientes/:id" element={<ClienteDetalhePage />} />
+        <Route path="/clientes" element={<RequireNotCliente><ClientesPage /></RequireNotCliente>} />
+        <Route path="/clientes/:id" element={<RequireNotCliente><ClienteDetalhePage /></RequireNotCliente>} />
         <Route path="/contratos" element={<ContratosPage />} />
         <Route path="/agendamentos" element={<AgendamentosPage />} />
         <Route path="/calendario" element={<CalendarioPage />} />
@@ -70,6 +77,7 @@ function AppRoutes() {
         <Route path="/configuracoes/formas-pagamento" element={<FormasPagamentoPage />} />
         <Route path="/logs" element={<LogsPage />} />
         <Route path="/minha-conta" element={<MinhaContaPage />} />
+        <Route path="/admin/usuarios" element={<RequireAdmin><UsuariosPage /></RequireAdmin>} />
         <Route path="/admin/auditoria" element={<RequireAdmin><AuditLogPage /></RequireAdmin>} />
       </Route>
       <Route path="*" element={<NotFound />} />

@@ -19,6 +19,7 @@ import { AgendamentoDeleteDialog } from '@/components/agendamentos/AgendamentoDe
 import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos, fetchPlanos, fetchDisponibilidades, checkinAgendamento, checkoutAgendamento } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import { generateAgendamentoPdf } from '@/lib/pdf';
+import { useAuth } from '@/hooks/useAuth';
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'Todos' },
@@ -28,6 +29,10 @@ const STATUS_FILTERS = [
 ];
 
 export default function AgendamentosPage() {
+  const { user } = useAuth();
+  const isCliente = user?.isCliente ?? false;
+  const clienteId = user?.clienteId;
+
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [salas, setSalas] = useState<Sala[]>([]);
@@ -60,6 +65,8 @@ export default function AgendamentosPage() {
   const filtered = useMemo(() => {
     return agendamentos
       .filter(ag => {
+        // Client can only see their own
+        if (isCliente && clienteId && ag.cliente_id !== clienteId) return false;
         if (filtroStatus !== 'all' && ag.status !== filtroStatus) return false;
         if (filtroSala !== 'all' && ag.sala_id !== filtroSala) return false;
         if (!busca) return true;
@@ -69,7 +76,7 @@ export default function AgendamentosPage() {
         return (cliente?.nome_razao_social.toLowerCase().includes(q)) || (sala?.nome.toLowerCase().includes(q)) || ag.data.includes(busca);
       })
       .sort((a, b) => b.data.localeCompare(a.data) || b.hora_inicio.localeCompare(a.hora_inicio));
-  }, [agendamentos, busca, filtroStatus, filtroSala, clientes, salas]);
+  }, [agendamentos, busca, filtroStatus, filtroSala, clientes, salas, isCliente, clienteId]);
 
   const paginated = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -78,9 +85,24 @@ export default function AgendamentosPage() {
 
   useEffect(() => { setPage(1); }, [busca, filtroStatus, filtroSala]);
 
+  // For client creating agendamento, filter clientes to only themselves
+  const clientesForForm = isCliente && clienteId ? clientes.filter(c => c.id === clienteId) : clientes;
+  // For client, filter contratos to only theirs
+  const contratosForForm = isCliente && clienteId ? contratos.filter(c => c.cliente_id === clienteId) : contratos;
+
   async function handleSave(ag: Agendamento) {
     try {
+      // Client can only create for themselves
+      if (isCliente && clienteId && ag.cliente_id !== clienteId) {
+        toast.error('Você só pode criar agendamentos para a sua conta.');
+        return;
+      }
       const isNew = !ag.id;
+      // Client cannot edit existing
+      if (isCliente && !isNew) {
+        toast.error('Você não pode editar agendamentos.');
+        return;
+      }
       const saved = await upsertAgendamento(ag);
       await logAudit(isNew ? 'criar' : 'editar', 'agendamento', saved.id, { data: saved.data, hora: saved.hora_inicio });
       toast.success(isNew ? 'Agendamento criado com sucesso!' : 'Agendamento atualizado.');
@@ -118,7 +140,11 @@ export default function AgendamentosPage() {
 
   return (
     <div className="page-container">
-      <PageHeader titulo="Agendamentos" subtitulo="Gerencie reservas e horários das salas" acaoPrincipal={{ label: 'Novo Agendamento', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } }} />
+      <PageHeader
+        titulo="Agendamentos"
+        subtitulo={isCliente ? "Visualize e crie seus agendamentos" : "Gerencie reservas e horários das salas"}
+        acaoPrincipal={{ label: 'Novo Agendamento', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } }}
+      />
 
       <FilterBar placeholder="Buscar por cliente, sala ou data..." value={busca} onChange={setBusca}>
         <div className="flex gap-1">
@@ -156,14 +182,14 @@ export default function AgendamentosPage() {
               <TableHead>Status</TableHead>
               <TableHead>Presença</TableHead>
               <TableHead>Observação</TableHead>
-              <TableHead className="w-12" />
+              {!isCliente && <TableHead className="w-12" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginated.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9}>
-                  <EmptyState icon={CalendarDays} titulo="Nenhum agendamento encontrado" descricao={busca ? 'Tente alterar os termos de busca.' : 'Clique em "Novo Agendamento" para começar.'} />
+                <TableCell colSpan={isCliente ? 8 : 9}>
+                  <EmptyState icon={CalendarDays} titulo="Nenhum agendamento encontrado" descricao={busca ? 'Tente alterar os termos de busca.' : isCliente ? 'Clique em "Novo Agendamento" para agendar.' : 'Clique em "Novo Agendamento" para começar.'} />
                 </TableCell>
               </TableRow>
             )}
@@ -192,29 +218,31 @@ export default function AgendamentosPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm max-w-[150px] truncate">{ag.observacao || '—'}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                        {!ag.checkin_at && ag.status !== 'cancelado' && (
-                          <DropdownMenuItem onClick={() => handleCheckin(ag)}><LogIn className="mr-2 h-4 w-4" /> Check-in</DropdownMenuItem>
-                        )}
-                        {ag.checkin_at && !ag.checkout_at && (
-                          <DropdownMenuItem onClick={() => handleCheckout(ag)}><LogOut className="mr-2 h-4 w-4" /> Check-out</DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem onClick={() => {
-                          const cl = clientes.find(c => c.id === ag.cliente_id);
-                          const sl = salas.find(s => s.id === ag.sala_id);
-                          const ct = contratos.find(c => c.id === ag.contrato_id);
-                          const pl = ct ? planos.find(p => p.id === ct.plano_id) : null;
-                          if (cl && sl) generateAgendamentoPdf(ag, cl, sl, ct, pl);
-                        }}><FileText className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ag); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {!isCliente && (
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                          {!ag.checkin_at && ag.status !== 'cancelado' && (
+                            <DropdownMenuItem onClick={() => handleCheckin(ag)}><LogIn className="mr-2 h-4 w-4" /> Check-in</DropdownMenuItem>
+                          )}
+                          {ag.checkin_at && !ag.checkout_at && (
+                            <DropdownMenuItem onClick={() => handleCheckout(ag)}><LogOut className="mr-2 h-4 w-4" /> Check-out</DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem onClick={() => {
+                            const cl = clientes.find(c => c.id === ag.cliente_id);
+                            const sl = salas.find(s => s.id === ag.sala_id);
+                            const ct = contratos.find(c => c.id === ag.contrato_id);
+                            const pl = ct ? planos.find(p => p.id === ct.plano_id) : null;
+                            if (cl && sl) generateAgendamentoPdf(ag, cl, sl, ct, pl);
+                          }}><FileText className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ag); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
@@ -225,8 +253,8 @@ export default function AgendamentosPage() {
         )}
       </Card>
 
-      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientes} salas={salas} contratos={contratos} agendamentos={agendamentos} planos={planos} disponibilidades={disponibilidades} />
-      <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
+      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientesForForm} salas={salas} contratos={contratosForForm} agendamentos={agendamentos} planos={planos} disponibilidades={disponibilidades} />
+      {!isCliente && <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />}
     </div>
   );
 }

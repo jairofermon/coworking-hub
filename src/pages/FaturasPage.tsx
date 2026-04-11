@@ -9,16 +9,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, MoreHorizontal, Pencil, Trash2, Receipt, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Fatura, Cliente, Contrato, FormaPagamento } from '@/types';
 import { fetchFaturas, upsertFatura, deleteFatura, fetchClientes, fetchContratos, fetchFormasPagamento } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
+import { useAuth } from '@/hooks/useAuth';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'Todas' },
@@ -29,6 +30,10 @@ const STATUS_FILTERS = [
 ];
 
 export default function FaturasPage() {
+  const { user } = useAuth();
+  const isCliente = user?.isCliente ?? false;
+  const clienteId = user?.clienteId;
+
   const [faturas, setFaturas] = useState<Fatura[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
@@ -112,13 +117,14 @@ export default function FaturasPage() {
 
   const filtered = useMemo(() => {
     return faturas.filter(f => {
+      if (isCliente && clienteId && f.cliente_id !== clienteId) return false;
       if (filtroStatus !== 'all' && f.status !== filtroStatus) return false;
       if (!busca) return true;
       const q = busca.toLowerCase();
       const cliente = clientes.find(c => c.id === f.cliente_id);
       return (cliente?.nome_razao_social.toLowerCase().includes(q)) || (cliente?.cpf_cnpj?.toLowerCase().includes(q)) || f.data_vencimento.includes(busca);
     });
-  }, [faturas, busca, filtroStatus, clientes]);
+  }, [faturas, busca, filtroStatus, clientes, isCliente, clienteId]);
 
   const paginated = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -133,7 +139,11 @@ export default function FaturasPage() {
 
   return (
     <div className="page-container">
-      <PageHeader titulo="Faturas" subtitulo="Controle de faturamento e pagamentos" acaoPrincipal={{ label: 'Nova Fatura', icon: Plus, onClick: () => openForm() }} />
+      <PageHeader
+        titulo="Faturas"
+        subtitulo={isCliente ? "Visualize suas faturas" : "Controle de faturamento e pagamentos"}
+        acaoPrincipal={!isCliente ? { label: 'Nova Fatura', icon: Plus, onClick: () => openForm() } : undefined}
+      />
 
       <FilterBar placeholder="Buscar por cliente ou data..." value={busca} onChange={setBusca}>
         <div className="flex gap-1">
@@ -149,21 +159,21 @@ export default function FaturasPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Cliente</TableHead>
+              {!isCliente && <TableHead>Cliente</TableHead>}
               <TableHead>Contrato</TableHead>
               <TableHead>Valor</TableHead>
               <TableHead>Vencimento</TableHead>
               <TableHead>Pagamento</TableHead>
               <TableHead>Forma</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-12" />
+              {!isCliente && <TableHead className="w-12" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginated.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8}>
-                  <EmptyState icon={Receipt} titulo="Nenhuma fatura encontrada" descricao={busca ? 'Tente alterar os termos de busca.' : 'Clique em "Nova Fatura" para criar.'} />
+                <TableCell colSpan={isCliente ? 6 : 8}>
+                  <EmptyState icon={Receipt} titulo="Nenhuma fatura encontrada" descricao={busca ? 'Tente alterar os termos de busca.' : isCliente ? 'Você ainda não possui faturas.' : 'Clique em "Nova Fatura" para criar.'} />
                 </TableCell>
               </TableRow>
             )}
@@ -172,23 +182,25 @@ export default function FaturasPage() {
               const contrato = contratos.find(c => c.id === f.contrato_id);
               return (
                 <TableRow key={f.id}>
-                  <TableCell className="font-medium">{cliente?.nome_razao_social ?? '—'}</TableCell>
+                  {!isCliente && <TableCell className="font-medium">{cliente?.nome_razao_social ?? '—'}</TableCell>}
                   <TableCell className="font-mono text-xs">{contrato?.codigo || '—'}</TableCell>
                   <TableCell className="font-medium">R$ {f.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell className="whitespace-nowrap">{new Date(f.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell className="text-muted-foreground whitespace-nowrap">{f.data_pagamento ? new Date(f.data_pagamento + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{f.forma_pagamento || '—'}</TableCell>
                   <TableCell><StatusBadge status={f.status} /></TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openForm(f)}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(f); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {!isCliente && (
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openForm(f)}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(f); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
@@ -199,96 +211,98 @@ export default function FaturasPage() {
         )}
       </Card>
 
-      {/* Form Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Editar Fatura' : 'Nova Fatura'}</DialogTitle>
-            <DialogDescription>Preencha os dados da fatura abaixo.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Cliente <span className="text-destructive">*</span></Label>
-              <Select value={form.cliente_id} onValueChange={v => setForm(p => ({ ...p, cliente_id: v, contrato_id: '' }))}>
-                <SelectTrigger className={errors.cliente_id ? 'border-destructive' : ''}><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
-                <SelectContent>{clientes.map(c => <SelectItem key={c.id} value={c.id}>{c.nome_razao_social}</SelectItem>)}</SelectContent>
-              </Select>
-              {errors.cliente_id && <p className="text-xs text-destructive">{errors.cliente_id}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label>Contrato (opcional)</Label>
-              <Select value={form.contrato_id || 'none'} onValueChange={v => setForm(p => ({ ...p, contrato_id: v === 'none' ? '' : v }))}>
-                <SelectTrigger><SelectValue placeholder="Nenhum contrato" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
-                  {contratosCliente.map(c => <SelectItem key={c.id} value={c.id}>{c.codigo}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Valor <span className="text-destructive">*</span></Label>
-                <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.valor} onChange={e => setForm(p => ({ ...p, valor: e.target.value }))} className={errors.valor ? 'border-destructive' : ''} />
-                {errors.valor && <p className="text-xs text-destructive">{errors.valor}</p>}
+      {!isCliente && (
+        <>
+          <Dialog open={formOpen} onOpenChange={setFormOpen}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{editing ? 'Editar Fatura' : 'Nova Fatura'}</DialogTitle>
+                <DialogDescription>Preencha os dados da fatura abaixo.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Cliente <span className="text-destructive">*</span></Label>
+                  <Select value={form.cliente_id} onValueChange={v => setForm(p => ({ ...p, cliente_id: v, contrato_id: '' }))}>
+                    <SelectTrigger className={errors.cliente_id ? 'border-destructive' : ''}><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
+                    <SelectContent>{clientes.map(c => <SelectItem key={c.id} value={c.id}>{c.nome_razao_social}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {errors.cliente_id && <p className="text-xs text-destructive">{errors.cliente_id}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>Contrato (opcional)</Label>
+                  <Select value={form.contrato_id || 'none'} onValueChange={v => setForm(p => ({ ...p, contrato_id: v === 'none' ? '' : v }))}>
+                    <SelectTrigger><SelectValue placeholder="Nenhum contrato" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {contratosCliente.map(c => <SelectItem key={c.id} value={c.id}>{c.codigo}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Valor <span className="text-destructive">*</span></Label>
+                    <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.valor} onChange={e => setForm(p => ({ ...p, valor: e.target.value }))} className={errors.valor ? 'border-destructive' : ''} />
+                    {errors.valor && <p className="text-xs text-destructive">{errors.valor}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v }))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pendente">Pendente</SelectItem>
+                        <SelectItem value="pago">Pago</SelectItem>
+                        <SelectItem value="atrasado">Atrasado</SelectItem>
+                        <SelectItem value="cancelado">Cancelado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Vencimento <span className="text-destructive">*</span></Label>
+                    <Input type="date" value={form.data_vencimento} onChange={e => setForm(p => ({ ...p, data_vencimento: e.target.value }))} className={errors.data_vencimento ? 'border-destructive' : ''} />
+                    {errors.data_vencimento && <p className="text-xs text-destructive">{errors.data_vencimento}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data do pagamento</Label>
+                    <Input type="date" value={form.data_pagamento} onChange={e => setForm(p => ({ ...p, data_pagamento: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Forma de pagamento</Label>
+                  <Select value={form.forma_pagamento} onValueChange={v => setForm(p => ({ ...p, forma_pagamento: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      {formas.filter(f => f.ativo).map(f => <SelectItem key={f.id} value={f.nome}>{f.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Observação</Label>
+                  <Textarea value={form.observacao} onChange={e => setForm(p => ({ ...p, observacao: e.target.value }))} rows={2} placeholder="Observações opcionais..." />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pendente">Pendente</SelectItem>
-                    <SelectItem value="pago">Pago</SelectItem>
-                    <SelectItem value="atrasado">Atrasado</SelectItem>
-                    <SelectItem value="cancelado">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Vencimento <span className="text-destructive">*</span></Label>
-                <Input type="date" value={form.data_vencimento} onChange={e => setForm(p => ({ ...p, data_vencimento: e.target.value }))} className={errors.data_vencimento ? 'border-destructive' : ''} />
-                {errors.data_vencimento && <p className="text-xs text-destructive">{errors.data_vencimento}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Data do pagamento</Label>
-                <Input type="date" value={form.data_pagamento} onChange={e => setForm(p => ({ ...p, data_pagamento: e.target.value }))} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Forma de pagamento</Label>
-              <Select value={form.forma_pagamento} onValueChange={v => setForm(p => ({ ...p, forma_pagamento: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  {formas.filter(f => f.ativo).map(f => <SelectItem key={f.id} value={f.nome}>{f.nome}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Observação</Label>
-              <Textarea value={form.observacao} onChange={e => setForm(p => ({ ...p, observacao: e.target.value }))} rows={2} placeholder="Observações opcionais..." />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editing ? 'Salvar alterações' : 'Criar fatura'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
+                <Button onClick={handleSave}>{editing ? 'Salvar alterações' : 'Criar fatura'}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
-      {/* Delete Confirm */}
-      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Excluir fatura?</DialogTitle>
-            <DialogDescription>Essa ação não poderá ser desfeita. A fatura será removida permanentemente.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDelete}>Confirmar exclusão</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Excluir fatura?</DialogTitle>
+                <DialogDescription>Essa ação não poderá ser desfeita. A fatura será removida permanentemente.</DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancelar</Button>
+                <Button variant="destructive" onClick={handleDelete}>Confirmar exclusão</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }

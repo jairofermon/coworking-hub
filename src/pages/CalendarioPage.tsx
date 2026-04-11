@@ -10,12 +10,17 @@ import { Agendamento, Cliente, Sala, Contrato } from '@/types';
 import { fetchAgendamentos, fetchClientes, fetchSalas, fetchContratos } from '@/lib/api';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, isSameDay, eachDayOfInterval, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAuth } from '@/hooks/useAuth';
 
 type ViewMode = 'day' | 'week' | 'month';
 
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 7);
 
 export default function CalendarioPage() {
+  const { user } = useAuth();
+  const isCliente = user?.isCliente ?? false;
+  const clienteId = user?.clienteId;
+
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [salas, setSalas] = useState<Sala[]>([]);
@@ -113,20 +118,20 @@ export default function CalendarioPage() {
       </div>
 
       {viewMode === 'month' ? (
-        <MonthView days={days} getAgendamentosForDay={getAgendamentosForDay} salas={salas} clientes={clientes} contratos={contratos} currentDate={currentDate} />
+        <MonthView days={days} getAgendamentosForDay={getAgendamentosForDay} salas={salas} clientes={clientes} contratos={contratos} currentDate={currentDate} isCliente={isCliente} clienteId={clienteId ?? null} />
       ) : (
-        <WeekDayView days={days} hours={HOURS} getAgendamentosForDay={getAgendamentosForDay} salas={salas} clientes={clientes} contratos={contratos} />
+        <WeekDayView days={days} hours={HOURS} getAgendamentosForDay={getAgendamentosForDay} salas={salas} clientes={clientes} contratos={contratos} isCliente={isCliente} clienteId={clienteId ?? null} />
       )}
     </div>
   );
 }
 
-function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes, contratos }: {
+function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes, contratos, isCliente, clienteId }: {
   days: Date[]; hours: number[];
   getAgendamentosForDay: (d: Date) => Agendamento[];
   salas: Sala[]; clientes: Cliente[]; contratos: Contrato[];
+  isCliente: boolean; clienteId: string | null;
 }) {
-  // Calculate overlap groups for a list of agendamentos
   function getOverlapGroups(ags: Agendamento[]) {
     const sorted = [...ags].sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
     const positions: Map<string, { col: number; totalCols: number }> = new Map();
@@ -145,10 +150,9 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes, cont
       if (!placed) groups.push([ag]);
     }
 
-    // Merge overlapping groups
     const mergedGroups: Agendamento[][] = [];
     for (const group of groups) {
-      const existing = mergedGroups.find(mg => 
+      const existing = mergedGroups.find(mg =>
         mg.some(g => group.some(ag => g.hora_inicio < ag.hora_fim && g.hora_fim > ag.hora_inicio))
       );
       if (existing) {
@@ -166,6 +170,10 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes, cont
     }
 
     return positions;
+  }
+
+  function isOwnAgendamento(ag: Agendamento) {
+    return !isCliente || ag.cliente_id === clienteId;
   }
 
   return (
@@ -197,8 +205,9 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes, cont
                   <div key={day.toISOString()} className={`border-r last:border-r-0 relative ${isToday(day) ? 'bg-primary/5' : ''}`}>
                     {hourAgs.map(ag => {
                       const sala = salas.find(s => s.id === ag.sala_id);
-                      const cliente = clientes.find(c => c.id === ag.cliente_id);
-                      const contrato = contratos.find(c => c.id === ag.contrato_id);
+                      const isOwn = isOwnAgendamento(ag);
+                      const cliente = isOwn ? clientes.find(c => c.id === ag.cliente_id) : null;
+                      const contrato = isOwn ? contratos.find(c => c.id === ag.contrato_id) : null;
                       const startH = parseInt(ag.hora_inicio.split(':')[0]);
                       const startM = parseInt(ag.hora_inicio.split(':')[1]);
                       const endH = parseInt(ag.hora_fim.split(':')[0]);
@@ -209,6 +218,28 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes, cont
                       const pos = positions.get(ag.id) || { col: 0, totalCols: 1 };
                       const widthPercent = 100 / pos.totalCols;
                       const leftPercent = pos.col * widthPercent;
+
+                      if (!isOwn) {
+                        // Show as "Ocupado" for other clients' agendamentos
+                        return (
+                          <div
+                            key={ag.id}
+                            className="absolute rounded px-1 py-0.5 text-[10px] leading-tight overflow-hidden cursor-default z-10 bg-muted/60"
+                            style={{
+                              borderLeft: `3px solid hsl(var(--muted-foreground))`,
+                              top: `${top}px`,
+                              height: `${height}px`,
+                              left: `${leftPercent}%`,
+                              width: `calc(${widthPercent}% - 2px)`,
+                            }}
+                            title="Ocupado"
+                          >
+                            <div className="font-semibold truncate text-muted-foreground">Ocupado</div>
+                            <div className="truncate text-muted-foreground">{ag.hora_inicio}-{ag.hora_fim}</div>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div
                           key={ag.id}
@@ -241,10 +272,11 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes, cont
   );
 }
 
-function MonthView({ days, getAgendamentosForDay, salas, clientes, contratos, currentDate }: {
+function MonthView({ days, getAgendamentosForDay, salas, clientes, contratos, currentDate, isCliente, clienteId }: {
   days: Date[];
   getAgendamentosForDay: (d: Date) => Agendamento[];
   salas: Sala[]; clientes: Cliente[]; contratos: Contrato[]; currentDate: Date;
+  isCliente: boolean; clienteId: string | null;
 }) {
   const weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
   const currentMonth = currentDate.getMonth();
@@ -271,14 +303,28 @@ function MonthView({ days, getAgendamentosForDay, salas, clientes, contratos, cu
               <div className="space-y-0.5">
                 {ags.slice(0, 3).map(ag => {
                   const sala = salas.find(s => s.id === ag.sala_id);
-                  const cliente = clientes.find(c => c.id === ag.cliente_id);
-                  const contrato = contratos.find(c => c.id === ag.contrato_id);
+                  const isOwn = !isCliente || ag.cliente_id === clienteId;
+                  const cliente = isOwn ? clientes.find(c => c.id === ag.cliente_id) : null;
+                  const contrato = isOwn ? contratos.find(c => c.id === ag.contrato_id) : null;
+
+                  if (!isOwn) {
+                    return (
+                      <div
+                        key={ag.id}
+                        className="text-[10px] rounded px-1 py-0.5 truncate bg-muted text-muted-foreground"
+                        title="Ocupado"
+                      >
+                        {ag.hora_inicio} Ocupado
+                      </div>
+                    );
+                  }
+
                   return (
                     <div
                       key={ag.id}
                       className="text-[10px] rounded px-1 py-0.5 truncate"
                       style={{ backgroundColor: sala?.cor_identificacao + '20', color: sala?.cor_identificacao }}
-                      title={`${sala?.nome} · ${cliente?.nome_razao_social} · ${contrato?.codigo || ''} (${contrato ? new Date(contrato.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR') + ' — ' + new Date(contrato.data_fim + 'T00:00:00').toLocaleDateString('pt-BR') : ''}) · ${ag.hora_inicio}-${ag.hora_fim}`}
+                      title={`${sala?.nome} · ${cliente?.nome_razao_social} · ${contrato?.codigo || ''} · ${ag.hora_inicio}-${ag.hora_fim}`}
                     >
                       {ag.hora_inicio} {sala?.nome} {contrato?.codigo ? `[${contrato.codigo}]` : ''} - {cliente?.nome_razao_social?.split(' ')[0]}
                     </div>
