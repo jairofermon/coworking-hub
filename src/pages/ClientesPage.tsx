@@ -141,6 +141,7 @@ export default function ClientesPage() {
       await deleteCliente(deleting.id);
       await logAudit('excluir', 'cliente', deleting.id, { nome: deleting.nome_razao_social });
       toast.success(`Cliente "${deleting.nome_razao_social}" excluído com sucesso.`);
+      window.dispatchEvent(new Event('cliente-updated'));
       setDeleteOpen(false); setDeleting(null); await loadData();
     } catch (e: any) { toast.error('Erro ao excluir: ' + e.message); }
   }
