@@ -142,8 +142,8 @@ export default function AgendamentosPage() {
     <div className="page-container">
       <PageHeader
         titulo="Agendamentos"
-        subtitulo={isCliente ? "Visualize seus agendamentos" : "Gerencie reservas e horários das salas"}
-        acaoPrincipal={!isCliente ? { label: 'Novo Agendamento', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } } : undefined}
+        subtitulo={isCliente ? "Visualize e crie seus agendamentos" : "Gerencie reservas e horários das salas"}
+        acaoPrincipal={{ label: 'Novo Agendamento', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } }}
       />
 
       <FilterBar placeholder="Buscar por cliente, sala ou data..." value={busca} onChange={setBusca}>
@@ -255,12 +255,8 @@ export default function AgendamentosPage() {
         )}
       </Card>
 
-      {!isCliente && (
-        <>
-          <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientesForForm} salas={salas} contratos={contratosForForm} agendamentos={agendamentos} planos={planos} disponibilidades={disponibilidades} />
-          <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
-        </>
-      )}
+      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientesForForm} salas={salas} contratos={contratosForForm} agendamentos={agendamentos} planos={planos} disponibilidades={disponibilidades} />
+      {!isCliente && <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />}
     </div>
   );
 }
