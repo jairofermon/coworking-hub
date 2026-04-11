@@ -191,11 +191,25 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
                 <Clock className="h-4 w-4" />
                 Controle de Horas — {selectedPlano.nome}
               </div>
-              <Progress value={usagePercent} className="h-2" />
+              <Progress value={usagePercent} className={`h-2 ${usagePercent >= 100 ? '[&>div]:bg-destructive' : usagePercent >= 80 ? '[&>div]:bg-yellow-500' : ''}`} />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Usadas: {horasUsadas.toFixed(1)}h</span>
                 <span>Total: {horasPrevistas.toFixed(1)}h</span>
               </div>
+
+              {usagePercent >= 100 && (
+                <div className="flex items-center gap-2 rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <span className="font-medium">Você usou 100% do seu plano. Considere fazer um upgrade.</span>
+                </div>
+              )}
+              {usagePercent >= 80 && usagePercent < 100 && (
+                <div className="flex items-center gap-2 rounded-md bg-yellow-500/10 border border-yellow-500/30 px-3 py-2 text-sm text-yellow-700">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <span className="font-medium">Você usou {usagePercent.toFixed(0)}% do seu plano. Restam apenas {horasDisponivel.toFixed(1)}h.</span>
+                </div>
+              )}
+
               <div className="flex items-center gap-1.5 text-xs">
                 {horasDisponivel <= 0 ? (
                   <><AlertTriangle className="h-3.5 w-3.5 text-destructive" /><span className="text-destructive font-medium">Sem horas disponíveis</span></>

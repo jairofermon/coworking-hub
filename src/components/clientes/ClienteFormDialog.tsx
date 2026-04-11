@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Check, ChevronsUpDown } from 'lucide-react';
@@ -31,6 +32,7 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSave }: Props
   const [form, setForm] = useState({
     cpf_cnpj: '', rg_inscricao_estadual: '', nome_razao_social: '', especialidade: '',
     data_nascimento: '', telefone: '', email: '', endereco_completo: '', chave_pix: '', observacao: '',
+    status_funil: 'lead' as 'lead' | 'free' | 'pago',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [espOpen, setEspOpen] = useState(false);
@@ -44,9 +46,10 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSave }: Props
         data_nascimento: cliente.data_nascimento, telefone: cliente.telefone,
         email: cliente.email, endereco_completo: cliente.endereco_completo,
         chave_pix: cliente.chave_pix, observacao: cliente.observacao,
+        status_funil: cliente.status_funil || 'lead',
       });
     } else {
-      setForm({ cpf_cnpj: '', rg_inscricao_estadual: '', nome_razao_social: '', especialidade: '', data_nascimento: '', telefone: '', email: '', endereco_completo: '', chave_pix: '', observacao: '' });
+      setForm({ cpf_cnpj: '', rg_inscricao_estadual: '', nome_razao_social: '', especialidade: '', data_nascimento: '', telefone: '', email: '', endereco_completo: '', chave_pix: '', observacao: '', status_funil: 'lead' });
     }
     setErrors({});
     setEspSearch('');
@@ -160,6 +163,17 @@ export function ClienteFormDialog({ open, onOpenChange, cliente, onSave }: Props
           <div className="space-y-2">
             <Label>Chave PIX</Label>
             <Input value={form.chave_pix} onChange={e => f('chave_pix', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Status Funil</Label>
+            <Select value={form.status_funil} onValueChange={v => f('status_funil', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="lead">Lead</SelectItem>
+                <SelectItem value="free">Free</SelectItem>
+                <SelectItem value="pago">Pago</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>Observação</Label>

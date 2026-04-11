@@ -124,6 +124,7 @@ export type Database = {
           nome_razao_social: string
           observacao: string | null
           rg_inscricao_estadual: string | null
+          status_funil: string
           telefone: string | null
           updated_at: string
         }
@@ -139,6 +140,7 @@ export type Database = {
           nome_razao_social: string
           observacao?: string | null
           rg_inscricao_estadual?: string | null
+          status_funil?: string
           telefone?: string | null
           updated_at?: string
         }
@@ -154,6 +156,7 @@ export type Database = {
           nome_razao_social?: string
           observacao?: string | null
           rg_inscricao_estadual?: string | null
+          status_funil?: string
           telefone?: string | null
           updated_at?: string
         }
