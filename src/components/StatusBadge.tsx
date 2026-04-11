@@ -6,6 +6,8 @@ const statusMap: Record<string, { label: string; className: string }> = {
   cancelado: { label: 'Cancelado', className: 'bg-destructive/10 text-destructive border-destructive/20' },
   confirmado: { label: 'Confirmado', className: 'bg-success/10 text-success border-success/20' },
   pendente: { label: 'Pendente', className: 'bg-warning/10 text-warning border-warning/20' },
+  pago: { label: 'Pago', className: 'bg-success/10 text-success border-success/20' },
+  atrasado: { label: 'Atrasado', className: 'bg-destructive/10 text-destructive border-destructive/20' },
   true: { label: 'Ativo', className: 'bg-success/10 text-success border-success/20' },
   false: { label: 'Inativo', className: 'bg-muted text-muted-foreground border-border' },
 };
