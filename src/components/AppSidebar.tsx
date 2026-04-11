@@ -54,6 +54,21 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (!user?.isAdmin) return;
+    async function fetchPending() {
+      const { count } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('approved', false);
+      setPendingCount(count ?? 0);
+    }
+    fetchPending();
+    const interval = setInterval(fetchPending, 30000);
+    return () => clearInterval(interval);
+  }, [user?.isAdmin]);
 
   return (
     <Sidebar collapsible="icon">
