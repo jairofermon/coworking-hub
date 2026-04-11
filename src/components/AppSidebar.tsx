@@ -13,6 +13,7 @@ import {
   LogOut,
   UserCircle,
   Receipt,
+  ClipboardList,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -37,6 +38,7 @@ const mainItems = [
   { title: 'Agendamentos', url: '/agendamentos', icon: CalendarDays },
   { title: 'Calendário', url: '/calendario', icon: CalendarRange },
   { title: 'Faturas', url: '/faturas', icon: Receipt },
+  { title: 'Logs de Uso', url: '/logs', icon: ClipboardList },
 ];
 
 const configItems = [

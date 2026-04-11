@@ -68,6 +68,7 @@ function AppRoutes() {
         <Route path="/faturas" element={<FaturasPage />} />
         <Route path="/configuracoes/planos" element={<PlanosPage />} />
         <Route path="/configuracoes/formas-pagamento" element={<FormasPagamentoPage />} />
+        <Route path="/logs" element={<LogsPage />} />
         <Route path="/minha-conta" element={<MinhaContaPage />} />
         <Route path="/admin/auditoria" element={<RequireAdmin><AuditLogPage /></RequireAdmin>} />
       </Route>
