@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ClienteSearchSelect } from '@/components/ClienteSearchSelect';
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'Todas' },
@@ -222,10 +223,12 @@ export default function FaturasPage() {
               <div className="space-y-4 py-2">
                 <div className="space-y-2">
                   <Label>Cliente <span className="text-destructive">*</span></Label>
-                  <Select value={form.cliente_id} onValueChange={v => setForm(p => ({ ...p, cliente_id: v, contrato_id: '' }))}>
-                    <SelectTrigger className={errors.cliente_id ? 'border-destructive' : ''}><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
-                    <SelectContent>{clientes.map(c => <SelectItem key={c.id} value={c.id}>{c.nome_razao_social}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <ClienteSearchSelect
+                    clientes={clientes}
+                    value={form.cliente_id}
+                    onChange={v => setForm(p => ({ ...p, cliente_id: v, contrato_id: '' }))}
+                    error={errors.cliente_id}
+                  />
                   {errors.cliente_id && <p className="text-xs text-destructive">{errors.cliente_id}</p>}
                 </div>
                 <div className="space-y-2">

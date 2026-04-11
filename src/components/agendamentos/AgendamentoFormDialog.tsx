@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
+import { ClienteSearchSelect } from '@/components/ClienteSearchSelect';
 import { Agendamento, Cliente, Sala, Contrato, Plano, DisponibilidadeSala } from '@/types';
 import { toast } from 'sonner';
 import { Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
@@ -154,10 +155,12 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Cliente *</Label>
-              <Select value={form.cliente_id} onValueChange={v => { f('cliente_id', v); f('contrato_id', ''); }}>
-                <SelectTrigger className={errors.cliente_id ? 'border-destructive' : ''}><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>{clientes.map(c => <SelectItem key={c.id} value={c.id}>{c.nome_razao_social}</SelectItem>)}</SelectContent>
-              </Select>
+              <ClienteSearchSelect
+                clientes={clientes}
+                value={form.cliente_id}
+                onChange={v => { f('cliente_id', v); f('contrato_id', ''); }}
+                error={errors.cliente_id}
+              />
               {errors.cliente_id && <p className="text-sm text-destructive">{errors.cliente_id}</p>}
             </div>
             <div className="space-y-2">
