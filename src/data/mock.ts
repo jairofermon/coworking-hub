@@ -38,7 +38,7 @@ export const mockContratos: Contrato[] = [
 ];
 
 export const mockAgendamentos: Agendamento[] = [
-  { id: '1', sala_id: '1', cliente_id: '1', contrato_id: '1', data: '2024-04-03', hora_inicio: '09:00', hora_fim: '11:00', status: 'confirmado', observacao: '' },
-  { id: '2', sala_id: '2', cliente_id: '2', contrato_id: '2', data: '2024-04-03', hora_inicio: '14:00', hora_fim: '16:00', status: 'pendente', observacao: '' },
-  { id: '3', sala_id: '1', cliente_id: '3', contrato_id: '1', data: '2024-04-04', hora_inicio: '08:00', hora_fim: '10:00', status: 'confirmado', observacao: '' },
+  { id: '1', sala_id: '1', cliente_id: '1', contrato_id: '1', data: '2024-04-03', hora_inicio: '09:00', hora_fim: '11:00', status: 'confirmado', observacao: '', checkin_at: '', checkout_at: '' },
+  { id: '2', sala_id: '2', cliente_id: '2', contrato_id: '2', data: '2024-04-03', hora_inicio: '14:00', hora_fim: '16:00', status: 'pendente', observacao: '', checkin_at: '', checkout_at: '' },
+  { id: '3', sala_id: '1', cliente_id: '3', contrato_id: '1', data: '2024-04-04', hora_inicio: '08:00', hora_fim: '10:00', status: 'confirmado', observacao: '', checkin_at: '', checkout_at: '' },
 ];

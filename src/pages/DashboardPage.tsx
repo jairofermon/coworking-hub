@@ -5,15 +5,24 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DoorOpen, Users, FileText, CalendarDays, TrendingUp, Loader2 } from 'lucide-react';
-import { fetchSalas, fetchClientes, fetchContratos, fetchAgendamentos, inactivateExpiredContracts } from '@/lib/api';
-import { Sala, Cliente, Contrato, Agendamento } from '@/types';
+import { Progress } from '@/components/ui/progress';
+import { DoorOpen, Users, FileText, CalendarDays, TrendingUp, Loader2, Clock, Lightbulb, AlertTriangle, BarChart3 } from 'lucide-react';
+import { fetchSalas, fetchClientes, fetchContratos, fetchAgendamentos, fetchDisponibilidades, inactivateExpiredContracts } from '@/lib/api';
+import { Sala, Cliente, Contrato, Agendamento, DisponibilidadeSala } from '@/types';
+
+function calcHours(hi: string, hf: string): number {
+  if (!hi || !hf) return 0;
+  const [h1, m1] = hi.split(':').map(Number);
+  const [h2, m2] = hf.split(':').map(Number);
+  return Math.max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60);
+}
 
 export default function DashboardPage() {
   const [salas, setSalas] = useState<Sala[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [disponibilidades, setDisponibilidades] = useState<DisponibilidadeSala[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [filtroSala, setFiltroSala] = useState<string>('all');
@@ -24,8 +33,8 @@ export default function DashboardPage() {
     async function load() {
       try {
         await inactivateExpiredContracts().catch(() => {});
-        const [s, c, ct, ag] = await Promise.all([fetchSalas(), fetchClientes(), fetchContratos(), fetchAgendamentos()]);
-        setSalas(s); setClientes(c); setContratos(ct); setAgendamentos(ag);
+        const [s, c, ct, ag, dp] = await Promise.all([fetchSalas(), fetchClientes(), fetchContratos(), fetchAgendamentos(), fetchDisponibilidades()]);
+        setSalas(s); setClientes(c); setContratos(ct); setAgendamentos(ag); setDisponibilidades(dp);
       } catch {} finally { setLoading(false); }
     }
     load();
@@ -49,25 +58,122 @@ export default function DashboardPage() {
     });
   }, [agendamentos, filtroSala, filtroDataInicio, filtroDataFim]);
 
+  // Strategic metrics
+  const taxaOcupacao = useMemo(() => {
+    const salasAtivas = filtroSala === 'all' ? salas.filter(s => s.ativo) : salas.filter(s => s.id === filtroSala && s.ativo);
+    if (salasAtivas.length === 0) return 0;
+
+    let totalHorasDisp = 0;
+    let totalHorasUsadas = 0;
+
+    // Calculate for each day in the period
+    const agAtivos = agendamentosFiltered.filter(a => a.status !== 'cancelado');
+
+    salasAtivas.forEach(sala => {
+      const salaDisps = disponibilidades.filter(d => d.sala_id === sala.id && d.ativo);
+      // Sum weekly availability hours
+      const horasSemanais = salaDisps.reduce((s, d) => s + calcHours(d.hora_inicio, d.hora_fim), 0);
+      // Rough estimate: 4 weeks per period
+      totalHorasDisp += horasSemanais * 4;
+
+      const salaAgs = agAtivos.filter(a => a.sala_id === sala.id);
+      totalHorasUsadas += salaAgs.reduce((s, a) => s + calcHours(a.hora_inicio, a.hora_fim), 0);
+    });
+
+    return totalHorasDisp > 0 ? Math.min(100, (totalHorasUsadas / totalHorasDisp) * 100) : 0;
+  }, [salas, disponibilidades, agendamentosFiltered, filtroSala]);
+
+  // Most used rooms
+  const salasRanking = useMemo(() => {
+    const agAtivos = agendamentosFiltered.filter(a => a.status !== 'cancelado');
+    const map = new Map<string, number>();
+    agAtivos.forEach(a => map.set(a.sala_id, (map.get(a.sala_id) ?? 0) + calcHours(a.hora_inicio, a.hora_fim)));
+    return Array.from(map.entries())
+      .map(([id, hours]) => ({ sala: salas.find(s => s.id === id), hours }))
+      .filter(r => r.sala)
+      .sort((a, b) => b.hours - a.hours);
+  }, [agendamentosFiltered, salas]);
+
+  // Peak hours
+  const horariosPico = useMemo(() => {
+    const agAtivos = agendamentosFiltered.filter(a => a.status !== 'cancelado');
+    const hourCounts = new Map<number, number>();
+    agAtivos.forEach(a => {
+      const [h] = a.hora_inicio.split(':').map(Number);
+      hourCounts.set(h, (hourCounts.get(h) ?? 0) + 1);
+    });
+    return Array.from(hourCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([hour, count]) => ({ hour: `${String(hour).padStart(2, '0')}:00`, count }));
+  }, [agendamentosFiltered]);
+
+  // Idle hours - available hours with no bookings
+  const horariosOciosos = useMemo(() => {
+    const agAtivos = agendamentosFiltered.filter(a => a.status !== 'cancelado');
+    const hourCounts = new Map<number, number>();
+    for (let h = 6; h < 22; h++) hourCounts.set(h, 0);
+    agAtivos.forEach(a => {
+      const [h] = a.hora_inicio.split(':').map(Number);
+      hourCounts.set(h, (hourCounts.get(h) ?? 0) + 1);
+    });
+    return Array.from(hourCounts.entries())
+      .filter(([_, count]) => count === 0)
+      .map(([hour]) => `${String(hour).padStart(2, '0')}:00`);
+  }, [agendamentosFiltered]);
+
+  // Auto-insights
+  const insights = useMemo(() => {
+    const items: { type: 'warning' | 'success' | 'info'; text: string }[] = [];
+
+    // Underutilized rooms
+    salasRanking.forEach(r => {
+      if (r.hours < 5 && r.sala) {
+        items.push({ type: 'warning', text: `${r.sala.nome} está subutilizada (${r.hours.toFixed(1)}h no período)` });
+      }
+    });
+
+    // High-demand hours
+    horariosPico.forEach(h => {
+      if (h.count >= 5) {
+        items.push({ type: 'info', text: `Horário ${h.hour} tem alta demanda (${h.count} agendamentos) → considere aumentar preço` });
+      }
+    });
+
+    // Idle hours
+    if (horariosOciosos.length > 5) {
+      items.push({ type: 'warning', text: `${horariosOciosos.length} faixas de horário sem agendamentos no período` });
+    }
+
+    // Occupancy
+    if (taxaOcupacao < 30) {
+      items.push({ type: 'warning', text: `Taxa de ocupação baixa (${taxaOcupacao.toFixed(0)}%). Considere promoções.` });
+    } else if (taxaOcupacao > 80) {
+      items.push({ type: 'success', text: `Excelente taxa de ocupação (${taxaOcupacao.toFixed(0)}%)!` });
+    }
+
+    return items;
+  }, [salasRanking, horariosPico, horariosOciosos, taxaOcupacao]);
+
   if (loading) return <div className="page-container flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
 
   const today = new Date().toISOString().split('T')[0];
   const agendamentosHoje = agendamentosFiltered.filter(a => a.data === today);
   const contratosAtivos = contratosFiltered.filter(c => c.status === 'ativo');
   const proximosAgendamentos = agendamentosFiltered.filter(a => a.data >= today && a.status !== 'cancelado').slice(0, 5);
-
-  const salasFiltered = filtroSala === 'all' ? salas : salas.filter(s => s.id === filtroSala);
+  const salasFilteredList = filtroSala === 'all' ? salas : salas.filter(s => s.id === filtroSala);
+  const maxHours = salasRanking.length > 0 ? salasRanking[0].hours : 1;
 
   const stats = [
-    { label: 'Salas Ativas', value: salasFiltered.filter(s => s.ativo).length, total: salasFiltered.length, icon: DoorOpen, color: 'text-primary' },
-    { label: 'Clientes', value: clientes.length, icon: Users, color: 'text-primary' },
-    { label: 'Contratos Ativos', value: contratosAtivos.length, icon: FileText, color: 'text-green-600' },
-    { label: 'Agendamentos Hoje', value: agendamentosHoje.length, icon: CalendarDays, color: 'text-amber-600' },
+    { label: 'Taxa de Ocupação', value: `${taxaOcupacao.toFixed(0)}%`, icon: BarChart3, color: 'text-primary' },
+    { label: 'Salas Ativas', value: `${salasFilteredList.filter(s => s.ativo).length}/${salasFilteredList.length}`, icon: DoorOpen, color: 'text-primary' },
+    { label: 'Contratos Ativos', value: String(contratosAtivos.length), icon: FileText, color: 'text-green-600' },
+    { label: 'Agendamentos Hoje', value: String(agendamentosHoje.length), icon: CalendarDays, color: 'text-amber-600' },
   ];
 
   return (
     <div className="page-container">
-      <PageHeader titulo="Dashboard" subtitulo="Visão geral do CM Coworking" />
+      <PageHeader titulo="Dashboard Estratégico" subtitulo="Métricas e insights do CM Coworking" />
 
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4 items-end">
@@ -103,6 +209,7 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.label}>
@@ -111,14 +218,86 @@ export default function DashboardPage() {
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {stat.value}
-                {stat.total !== undefined && <span className="text-sm font-normal text-muted-foreground">/{stat.total}</span>}
-              </div>
+              <div className="text-2xl font-bold">{stat.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Insights */}
+      {insights.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><Lightbulb className="h-4 w-4" />Insights Automáticos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {insights.map((insight, i) => (
+              <div key={i} className={`flex items-start gap-2 rounded-md px-3 py-2 text-sm ${
+                insight.type === 'warning' ? 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-700' :
+                insight.type === 'success' ? 'bg-green-500/10 border border-green-500/30 text-green-700' :
+                'bg-blue-500/10 border border-blue-500/30 text-blue-700'
+              }`}>
+                {insight.type === 'warning' ? <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" /> :
+                 insight.type === 'success' ? <TrendingUp className="h-4 w-4 shrink-0 mt-0.5" /> :
+                 <Lightbulb className="h-4 w-4 shrink-0 mt-0.5" />}
+                <span>{insight.text}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Salas mais usadas */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><DoorOpen className="h-4 w-4" />Salas Mais Usadas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {salasRanking.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Sem dados no período.</p>}
+            {salasRanking.map((r) => (
+              <div key={r.sala!.id} className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.sala!.cor_identificacao }} />
+                    <span className="font-medium">{r.sala!.nome}</span>
+                  </div>
+                  <span className="text-muted-foreground">{r.hours.toFixed(1)}h</span>
+                </div>
+                <Progress value={(r.hours / maxHours) * 100} className="h-1.5" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Horários de pico */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base"><Clock className="h-4 w-4" />Horários Mais Rentáveis</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {horariosPico.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Sem dados no período.</p>}
+            {horariosPico.map((h) => (
+              <div key={h.hour} className="flex items-center justify-between rounded-lg border p-3">
+                <span className="font-mono text-sm font-medium">{h.hour}</span>
+                <span className="text-sm text-muted-foreground">{h.count} agendamento(s)</span>
+              </div>
+            ))}
+            {horariosOciosos.length > 0 && (
+              <div className="mt-2 pt-2 border-t">
+                <p className="text-xs text-muted-foreground mb-1">Horários ociosos:</p>
+                <div className="flex flex-wrap gap-1">
+                  {horariosOciosos.slice(0, 8).map(h => (
+                    <span key={h} className="text-xs bg-muted rounded px-2 py-0.5 font-mono">{h}</span>
+                  ))}
+                  {horariosOciosos.length > 8 && <span className="text-xs text-muted-foreground">+{horariosOciosos.length - 8}</span>}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -160,6 +339,14 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Total em Taxas</span>
               <span className="font-semibold text-destructive">- R$ {contratosAtivos.reduce((acc, c) => acc + c.valor_taxa, 0).toLocaleString('pt-BR')}</span>
+            </div>
+            <div className="flex items-center justify-between border-t pt-3">
+              <span className="text-sm text-muted-foreground">MRR (Receita Recorrente Mensal)</span>
+              <span className="font-semibold text-primary">R$ {contratosAtivos.reduce((acc, c) => acc + c.valor_liquido, 0).toLocaleString('pt-BR')}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Ticket Médio</span>
+              <span className="font-semibold">R$ {contratosAtivos.length > 0 ? (contratosAtivos.reduce((acc, c) => acc + c.valor_total, 0) / contratosAtivos.length).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}</span>
             </div>
           </CardContent>
         </Card>

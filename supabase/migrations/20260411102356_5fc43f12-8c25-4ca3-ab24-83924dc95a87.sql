@@ -1,0 +1,3 @@
+ALTER TABLE public.agendamentos 
+ADD COLUMN checkin_at TIMESTAMP WITH TIME ZONE,
+ADD COLUMN checkout_at TIMESTAMP WITH TIME ZONE;

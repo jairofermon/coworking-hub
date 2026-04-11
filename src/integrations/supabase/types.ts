@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       agendamentos: {
         Row: {
+          checkin_at: string | null
+          checkout_at: string | null
           cliente_id: string
           contrato_id: string | null
           created_at: string
@@ -29,6 +31,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          checkin_at?: string | null
+          checkout_at?: string | null
           cliente_id: string
           contrato_id?: string | null
           created_at?: string
@@ -42,6 +46,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          checkin_at?: string | null
+          checkout_at?: string | null
           cliente_id?: string
           contrato_id?: string | null
           created_at?: string

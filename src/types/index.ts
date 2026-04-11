@@ -80,6 +80,8 @@ export interface Agendamento {
   hora_fim: string;
   status: 'confirmado' | 'pendente' | 'cancelado';
   observacao: string;
+  checkin_at: string;
+  checkout_at: string;
 }
 
 export interface Fatura {

@@ -6,12 +6,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, FileText } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, FileText, LogIn, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { Agendamento, Cliente, Sala, Contrato, Plano, DisponibilidadeSala } from '@/types';
 import { AgendamentoFormDialog } from '@/components/agendamentos/AgendamentoFormDialog';
 import { AgendamentoDeleteDialog } from '@/components/agendamentos/AgendamentoDeleteDialog';
-import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos, fetchPlanos, fetchDisponibilidades } from '@/lib/api';
+import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos, fetchPlanos, fetchDisponibilidades, checkinAgendamento, checkoutAgendamento } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import { generateAgendamentoPdf } from '@/lib/pdf';
 import { Separator } from '@/components/ui/separator';
@@ -94,12 +94,23 @@ export default function AgendamentosPage() {
         <TableCell className="font-mono text-xs">{contrato?.codigo || '—'}</TableCell>
         <TableCell className="text-muted-foreground">{ag.hora_inicio} - {ag.hora_fim}</TableCell>
         <TableCell><StatusBadge status={ag.status} /></TableCell>
+        <TableCell className="text-xs text-muted-foreground">
+          {ag.checkin_at ? <span className="text-green-600">In: {new Date(ag.checkin_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span> : '—'}
+          {' '}
+          {ag.checkout_at ? <span className="text-primary">Out: {new Date(ag.checkout_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span> : ''}
+        </TableCell>
         <TableCell className="text-muted-foreground text-sm">{ag.observacao || '—'}</TableCell>
         <TableCell>
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+              {!ag.checkin_at && ag.status !== 'cancelado' && (
+                <DropdownMenuItem onClick={async () => { try { await checkinAgendamento(ag.id); toast.success('Check-in registrado!'); await loadData(); } catch (e: any) { toast.error(e.message); } }}><LogIn className="mr-2 h-4 w-4" /> Check-in</DropdownMenuItem>
+              )}
+              {ag.checkin_at && !ag.checkout_at && (
+                <DropdownMenuItem onClick={async () => { try { await checkoutAgendamento(ag.id); toast.success('Check-out registrado!'); await loadData(); } catch (e: any) { toast.error(e.message); } }}><LogOut className="mr-2 h-4 w-4" /> Check-out</DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => {
                 const cl = clientes.find(c => c.id === ag.cliente_id);
                 const sl = salas.find(s => s.id === ag.sala_id);
@@ -125,6 +136,7 @@ export default function AgendamentosPage() {
         <TableHead>Contrato</TableHead>
         <TableHead>Horário</TableHead>
         <TableHead>Status</TableHead>
+        <TableHead>Presença</TableHead>
         <TableHead>Observação</TableHead>
         <TableHead className="w-12" />
       </TableRow>
@@ -142,7 +154,7 @@ export default function AgendamentosPage() {
           <Table>
             {tableHeader}
             <TableBody>
-              {futuros.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-6">Nenhum agendamento futuro.</TableCell></TableRow>}
+              {futuros.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Nenhum agendamento futuro.</TableCell></TableRow>}
               {futuros.map(renderRow)}
             </TableBody>
           </Table>
