@@ -74,7 +74,12 @@ export function AppSidebar() {
     }
     fetchIncomplete();
     const interval = setInterval(fetchIncomplete, 30000);
-    return () => clearInterval(interval);
+    const handleClienteUpdate = () => fetchIncomplete();
+    window.addEventListener('cliente-updated', handleClienteUpdate);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('cliente-updated', handleClienteUpdate);
+    };
   }, [isCliente]);
 
   // Build menu items based on role

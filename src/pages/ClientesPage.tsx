@@ -124,6 +124,7 @@ export default function ClientesPage() {
       const saved = await upsertCliente(cliente);
       await logAudit(isNew ? 'criar' : 'editar', 'cliente', saved.id, { nome: saved.nome_razao_social });
       toast.success(isNew ? 'Cliente cadastrado com sucesso!' : 'Dados do cliente atualizados.');
+      window.dispatchEvent(new Event('cliente-updated'));
       await loadData();
     } catch (e: any) { toast.error('Erro ao salvar: ' + e.message); }
   }
