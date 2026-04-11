@@ -14,9 +14,9 @@ export const mockDisponibilidades: DisponibilidadeSala[] = [
 ];
 
 export const mockClientes: Cliente[] = [
-  { id: '1', cpf_cnpj: '123.456.789-00', rg_inscricao_estadual: '12.345.678-9', nome_razao_social: 'Dra. Ana Silva', especialidade: 'Psicologia', data_nascimento: '1985-03-15', telefone: '(11) 99999-1234', email: 'ana@email.com', endereco_completo: 'Rua das Flores, 123', chave_pix: 'ana@email.com', observacao: '', created_at: '2024-01-10', updated_at: '2024-01-10' },
-  { id: '2', cpf_cnpj: '987.654.321-00', rg_inscricao_estadual: '98.765.432-1', nome_razao_social: 'Dr. Carlos Mendes', especialidade: 'Nutrição', data_nascimento: '1990-07-22', telefone: '(11) 98888-5678', email: 'carlos@email.com', endereco_completo: 'Av. Principal, 456', chave_pix: '98765432100', observacao: '', created_at: '2024-02-05', updated_at: '2024-02-05' },
-  { id: '3', cpf_cnpj: '456.789.123-00', rg_inscricao_estadual: '', nome_razao_social: 'Marina Costa', especialidade: 'Fisioterapia', data_nascimento: '1988-11-08', telefone: '(11) 97777-9012', email: 'marina@email.com', endereco_completo: 'Rua do Sol, 789', chave_pix: '', observacao: 'Cliente desde 2023', created_at: '2023-06-15', updated_at: '2024-01-20' },
+  { id: '1', cpf_cnpj: '123.456.789-00', rg_inscricao_estadual: '12.345.678-9', nome_razao_social: 'Dra. Ana Silva', especialidade: 'Psicologia', data_nascimento: '1985-03-15', telefone: '(11) 99999-1234', email: 'ana@email.com', endereco_completo: 'Rua das Flores, 123', chave_pix: 'ana@email.com', observacao: '', status_funil: 'pago', created_at: '2024-01-10', updated_at: '2024-01-10' },
+  { id: '2', cpf_cnpj: '987.654.321-00', rg_inscricao_estadual: '98.765.432-1', nome_razao_social: 'Dr. Carlos Mendes', especialidade: 'Nutrição', data_nascimento: '1990-07-22', telefone: '(11) 98888-5678', email: 'carlos@email.com', endereco_completo: 'Av. Principal, 456', chave_pix: '98765432100', observacao: '', status_funil: 'free', created_at: '2024-02-05', updated_at: '2024-02-05' },
+  { id: '3', cpf_cnpj: '456.789.123-00', rg_inscricao_estadual: '', nome_razao_social: 'Marina Costa', especialidade: 'Fisioterapia', data_nascimento: '1988-11-08', telefone: '(11) 97777-9012', email: 'marina@email.com', endereco_completo: 'Rua do Sol, 789', chave_pix: '', observacao: 'Cliente desde 2023', status_funil: 'lead', created_at: '2023-06-15', updated_at: '2024-01-20' },
 ];
 
 export const mockPlanos: Plano[] = [
