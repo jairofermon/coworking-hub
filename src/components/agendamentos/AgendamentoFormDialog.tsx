@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { Agendamento, Cliente, Sala, Contrato, Plano } from '@/types';
+import { Agendamento, Cliente, Sala, Contrato, Plano, DisponibilidadeSala } from '@/types';
 import { toast } from 'sonner';
 import { Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
@@ -20,6 +20,7 @@ interface Props {
   contratos: Contrato[];
   agendamentos: Agendamento[];
   planos: Plano[];
+  disponibilidades: DisponibilidadeSala[];
 }
 
 function calcHours(horaInicio: string, horaFim: string): number {
@@ -29,7 +30,7 @@ function calcHours(horaInicio: string, horaFim: string): number {
   return Math.max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60);
 }
 
-export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave, clientes, salas, contratos, agendamentos, planos }: Props) {
+export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave, clientes, salas, contratos, agendamentos, planos, disponibilidades }: Props) {
   const isEdit = !!agendamento;
   const [form, setForm] = useState({
     sala_id: '', cliente_id: '', contrato_id: '', data: '', hora_inicio: '', hora_fim: '',
@@ -108,6 +109,23 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
       if (conflito) {
         const clienteConflito = clientes.find(c => c.id === conflito.cliente_id);
         e.hora_inicio = `Conflito: ${conflito.hora_inicio}-${conflito.hora_fim} (${clienteConflito?.nome_razao_social || 'outro agendamento'})`;
+      }
+    }
+
+    // Validate against sala availability
+    if (form.sala_id && form.data && form.hora_inicio && form.hora_fim && !e.hora_inicio) {
+      const date = new Date(form.data + 'T00:00:00');
+      const diaSemana = date.getDay(); // 0=Dom, 1=Seg...
+      const salaDisps = disponibilidades.filter(d => d.sala_id === form.sala_id && d.dia_semana === diaSemana && d.ativo);
+      if (salaDisps.length === 0) {
+        const diasNomes: Record<number, string> = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
+        e.data = `Sala indisponível em ${diasNomes[diaSemana]}`;
+      } else {
+        const dentroDeAlgumIntervalo = salaDisps.some(d => form.hora_inicio >= d.hora_inicio && form.hora_fim <= d.hora_fim);
+        if (!dentroDeAlgumIntervalo) {
+          const horarios = salaDisps.map(d => `${d.hora_inicio}-${d.hora_fim}`).join(', ');
+          e.hora_inicio = `Horário fora da disponibilidade da sala. Disponível: ${horarios}`;
+        }
       }
     }
 
