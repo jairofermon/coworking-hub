@@ -28,6 +28,7 @@ const FUNIL_LABELS: Record<string, { label: string; variant: 'default' | 'second
 
 const FUNIL_FILTERS = [
   { value: 'all', label: 'Todos' },
+  { value: 'incompleto', label: '⚠ Incompletos' },
   { value: 'lead', label: 'Lead' },
   { value: 'free', label: 'Free' },
   { value: 'pago', label: 'Pago' },
@@ -46,6 +47,7 @@ function isIncompleteClient(c: Cliente): string[] {
   if (!c.cpf_cnpj) missing.push('CPF/CNPJ');
   if (!c.email) missing.push('E-mail');
   if (!c.telefone) missing.push('Telefone');
+  if (!c.endereco_completo) missing.push('Endereço');
   return missing;
 }
 
@@ -80,7 +82,9 @@ export default function ClientesPage() {
 
   const filtered = useMemo(() => {
     let result = clientes.filter(c => {
-      if (filtroFunil !== 'all' && c.status_funil !== filtroFunil) return false;
+      if (filtroFunil === 'incompleto') {
+        if (isIncompleteClient(c).length === 0) return false;
+      } else if (filtroFunil !== 'all' && c.status_funil !== filtroFunil) return false;
       if (!busca) return true;
       const q = busca.toLowerCase();
       return c.nome_razao_social.toLowerCase().includes(q) ||
