@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/PageHeader';
 import { FilterBar } from '@/components/FilterBar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, MessageCircle } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, MessageCircle, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { Cliente } from '@/types';
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog';
