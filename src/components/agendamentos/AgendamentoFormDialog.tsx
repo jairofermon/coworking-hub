@@ -30,7 +30,7 @@ function calcHours(horaInicio: string, horaFim: string): number {
   return Math.max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60);
 }
 
-export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave, clientes, salas, contratos, agendamentos, planos }: Props) {
+export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave, clientes, salas, contratos, agendamentos, planos, disponibilidades }: Props) {
   const isEdit = !!agendamento;
   const [form, setForm] = useState({
     sala_id: '', cliente_id: '', contrato_id: '', data: '', hora_inicio: '', hora_fim: '',
