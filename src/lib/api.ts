@@ -235,6 +235,7 @@ export async function fetchAgendamentos(): Promise<Agendamento[]> {
     id: r.id, sala_id: r.sala_id, cliente_id: r.cliente_id,
     contrato_id: r.contrato_id ?? '', data: r.data, hora_inicio: r.hora_inicio,
     hora_fim: r.hora_fim, status: r.status as Agendamento['status'], observacao: r.observacao ?? '',
+    checkin_at: (r as any).checkin_at ?? '', checkout_at: (r as any).checkout_at ?? '',
   }));
 }
 
@@ -259,7 +260,18 @@ function mapAgendamento(r: any): Agendamento {
     id: r.id, sala_id: r.sala_id, cliente_id: r.cliente_id,
     contrato_id: r.contrato_id ?? '', data: r.data, hora_inicio: r.hora_inicio,
     hora_fim: r.hora_fim, status: r.status as Agendamento['status'], observacao: r.observacao ?? '',
+    checkin_at: r.checkin_at ?? '', checkout_at: r.checkout_at ?? '',
   };
+}
+
+export async function checkinAgendamento(id: string) {
+  const { error } = await supabase.from('agendamentos').update({ checkin_at: new Date().toISOString() } as any).eq('id', id);
+  if (error) throw error;
+}
+
+export async function checkoutAgendamento(id: string) {
+  const { error } = await supabase.from('agendamentos').update({ checkout_at: new Date().toISOString() } as any).eq('id', id);
+  if (error) throw error;
 }
 
 export async function deleteAgendamento(id: string) {
