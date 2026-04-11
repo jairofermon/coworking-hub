@@ -245,6 +245,7 @@ export default function AgendamentosPage() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
+              );
             })}
           </TableBody>
         </Table>
