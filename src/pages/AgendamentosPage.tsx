@@ -156,7 +156,7 @@ export default function AgendamentosPage() {
         </div>
       )}
 
-      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientes} salas={salas} contratos={contratos} agendamentos={agendamentos} planos={planos} />
+      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientes} salas={salas} contratos={contratos} agendamentos={agendamentos} planos={planos} disponibilidades={disponibilidades} />
       <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
     </div>
   );
