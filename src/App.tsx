@@ -71,6 +71,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route element={<RequireAuth><AdminLayout /></RequireAuth>}>
         <Route path="/" element={<ClienteRedirect><DashboardPage /></ClienteRedirect>} />
         <Route path="/salas" element={<SalasPage />} />
