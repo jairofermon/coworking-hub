@@ -112,6 +112,23 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
       }
     }
 
+    // Validate against sala availability
+    if (form.sala_id && form.data && form.hora_inicio && form.hora_fim && !e.hora_inicio) {
+      const date = new Date(form.data + 'T00:00:00');
+      const diaSemana = date.getDay(); // 0=Dom, 1=Seg...
+      const salaDisps = disponibilidades.filter(d => d.sala_id === form.sala_id && d.dia_semana === diaSemana && d.ativo);
+      if (salaDisps.length === 0) {
+        const diasNomes: Record<number, string> = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
+        e.data = `Sala indisponível em ${diasNomes[diaSemana]}`;
+      } else {
+        const dentroDeAlgumIntervalo = salaDisps.some(d => form.hora_inicio >= d.hora_inicio && form.hora_fim <= d.hora_fim);
+        if (!dentroDeAlgumIntervalo) {
+          const horarios = salaDisps.map(d => `${d.hora_inicio}-${d.hora_fim}`).join(', ');
+          e.hora_inicio = `Horário fora da disponibilidade da sala. Disponível: ${horarios}`;
+        }
+      }
+    }
+
     // Validate hour limit
     if (horasPrevistas > 0 && form.hora_inicio && form.hora_fim && horasTotalAposAgendamento > horasPrevistas) {
       e.hora_fim = `Excede o limite de horas do plano. Disponível: ${horasDisponivel.toFixed(1)}h, este agendamento: ${horasAgendamentoAtual.toFixed(1)}h`;
