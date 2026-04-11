@@ -136,6 +136,7 @@ export default function AgendamentosPage() {
         <TableHead>Contrato</TableHead>
         <TableHead>Horário</TableHead>
         <TableHead>Status</TableHead>
+        <TableHead>Presença</TableHead>
         <TableHead>Observação</TableHead>
         <TableHead className="w-12" />
       </TableRow>
