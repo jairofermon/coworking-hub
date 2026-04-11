@@ -126,27 +126,51 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {/* User info & logout */}
-        <div className="mt-auto border-t border-sidebar-border p-3">
-          {!collapsed && user && (
-            <p className="text-xs text-muted-foreground truncate mb-2">{user.email}</p>
+        {/* Links & address */}
+        <div className="mt-auto border-t border-sidebar-border">
+          {!collapsed && (
+            <div className="px-3 pt-3 pb-1 space-y-1">
+              <a
+                href="https://maps.google.com/?q=Av.+Jovita+Feitosa,+3184+-+A+-+Parquelândia,+Fortaleza+-+CE,+60455-410"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-1.5 text-xs text-muted-foreground hover:text-sidebar-accent-foreground transition-colors"
+              >
+                <span className="shrink-0">📍</span>
+                <span>Av. Jovita Feitosa, 3184-A, Parquelândia, Fortaleza-CE</span>
+              </a>
+              <a
+                href="https://linktr.ee/cmcoworking?utm_source=linktree_profile_share"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-sidebar-accent-foreground transition-colors"
+              >
+                <span className="shrink-0">🔗</span>
+                <span>Nossos links</span>
+              </a>
+            </div>
           )}
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <NavLink to="/minha-conta" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
-                  <UserCircle className="mr-2 h-4 w-4 shrink-0" />
-                  {!collapsed && <span>Minha Conta</span>}
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton onClick={signOut}>
-                <LogOut className="mr-2 h-4 w-4 shrink-0" />
-                {!collapsed && <span>Sair</span>}
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+          <div className="p-3">
+            {!collapsed && user && (
+              <p className="text-xs text-muted-foreground truncate mb-2">{user.email}</p>
+            )}
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <NavLink to="/minha-conta" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
+                    <UserCircle className="mr-2 h-4 w-4 shrink-0" />
+                    {!collapsed && <span>Minha Conta</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={signOut}>
+                  <LogOut className="mr-2 h-4 w-4 shrink-0" />
+                  {!collapsed && <span>Sair</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </div>
         </div>
       </SidebarContent>
     </Sidebar>
