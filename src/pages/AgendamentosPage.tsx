@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Agendamento, Cliente, Sala, Contrato, Plano } from '@/types';
+import { Agendamento, Cliente, Sala, Contrato, Plano, DisponibilidadeSala } from '@/types';
 import { AgendamentoFormDialog } from '@/components/agendamentos/AgendamentoFormDialog';
 import { AgendamentoDeleteDialog } from '@/components/agendamentos/AgendamentoDeleteDialog';
-import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos, fetchPlanos } from '@/lib/api';
+import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos, fetchPlanos, fetchDisponibilidades } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import { Separator } from '@/components/ui/separator';
 
@@ -21,6 +21,7 @@ export default function AgendamentosPage() {
   const [salas, setSalas] = useState<Sala[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
+  const [disponibilidades, setDisponibilidades] = useState<DisponibilidadeSala[]>([]);
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -30,8 +31,8 @@ export default function AgendamentosPage() {
 
   async function loadData() {
     try {
-      const [ag, cl, sl, ct, pl] = await Promise.all([fetchAgendamentos(), fetchClientes(), fetchSalas(), fetchContratos(), fetchPlanos()]);
-      setAgendamentos(ag); setClientes(cl); setSalas(sl); setContratos(ct); setPlanos(pl);
+      const [ag, cl, sl, ct, pl, dp] = await Promise.all([fetchAgendamentos(), fetchClientes(), fetchSalas(), fetchContratos(), fetchPlanos(), fetchDisponibilidades()]);
+      setAgendamentos(ag); setClientes(cl); setSalas(sl); setContratos(ct); setPlanos(pl); setDisponibilidades(dp);
     } catch (e: any) { toast.error('Erro: ' + e.message); } finally { setLoading(false); }
   }
 
