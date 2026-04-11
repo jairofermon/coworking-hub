@@ -6,13 +6,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { Agendamento, Cliente, Sala, Contrato, Plano, DisponibilidadeSala } from '@/types';
 import { AgendamentoFormDialog } from '@/components/agendamentos/AgendamentoFormDialog';
 import { AgendamentoDeleteDialog } from '@/components/agendamentos/AgendamentoDeleteDialog';
 import { fetchAgendamentos, upsertAgendamento, deleteAgendamento, fetchClientes, fetchSalas, fetchContratos, fetchPlanos, fetchDisponibilidades } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
+import { generateAgendamentoPdf } from '@/lib/pdf';
 import { Separator } from '@/components/ui/separator';
 
 export default function AgendamentosPage() {
@@ -99,6 +100,13 @@ export default function AgendamentosPage() {
             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                const cl = clientes.find(c => c.id === ag.cliente_id);
+                const sl = salas.find(s => s.id === ag.sala_id);
+                const ct = contratos.find(c => c.id === ag.contrato_id);
+                const pl = ct ? planos.find(p => p.id === ct.plano_id) : null;
+                if (cl && sl) generateAgendamentoPdf(ag, cl, sl, ct, pl);
+              }}><FileText className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ag); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
             </DropdownMenuContent>

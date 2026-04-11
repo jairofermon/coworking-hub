@@ -6,13 +6,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { Contrato, Cliente, Sala, Plano, FormaPagamento } from '@/types';
 import { ContratoFormDialog } from '@/components/contratos/ContratoFormDialog';
 import { ContratoDeleteDialog } from '@/components/contratos/ContratoDeleteDialog';
 import { fetchContratos, upsertContrato, deleteContrato, fetchClientes, fetchSalas, fetchPlanos, fetchFormasPagamento, inactivateExpiredContracts } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
+import { generateContratoPdf } from '@/lib/pdf';
 
 export default function ContratosPage() {
   const [contratos, setContratos] = useState<Contrato[]>([]);
@@ -108,6 +109,13 @@ export default function ContratosPage() {
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => { setEditing(ct); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          const cl = clientes.find(c => c.id === ct.cliente_id);
+                          const sl = salas.find(s => s.id === ct.sala_id);
+                          const pl = planos.find(p => p.id === ct.plano_id);
+                          const fp = formas.find(f => f.id === ct.forma_pagamento_id);
+                          if (cl && sl && pl && fp) generateContratoPdf(ct, cl, sl, pl, fp);
+                        }}><FileText className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ct); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                       </DropdownMenuContent>
