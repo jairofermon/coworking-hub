@@ -141,28 +141,28 @@ export default function LoginPage() {
                 <>Já tem conta?{' '}<button type="button" className="text-primary underline" onClick={() => setMode('login')}>Entrar</button></>
               )}
             </div>
+
+            <div className="flex flex-col items-center gap-1.5 pt-2 text-xs text-muted-foreground">
+              <a
+                href="https://maps.google.com/?q=Av.+Jovita+Feitosa,+3184+-+A+-+Parquelândia,+Fortaleza+-+CE,+60455-410"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground transition-colors text-center"
+              >
+                📍 Av. Jovita Feitosa, 3184 - A - Parquelândia, Fortaleza - CE
+              </a>
+              <a
+                href="https://linktr.ee/cmcoworking?utm_source=linktree_profile_share"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground transition-colors"
+              >
+                🔗 Nossos links
+              </a>
+            </div>
           </div>
         </CardContent>
       </Card>
-
-      <div className="mt-6 flex flex-col items-center gap-2 text-sm text-muted-foreground">
-        <a
-          href="https://maps.google.com/?q=Av.+Jovita+Feitosa,+3184+-+A+-+Parquelândia,+Fortaleza+-+CE,+60455-410"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-foreground transition-colors text-center"
-        >
-          📍 Av. Jovita Feitosa, 3184 - A - Parquelândia, Fortaleza - CE
-        </a>
-        <a
-          href="https://linktr.ee/cmcoworking?utm_source=linktree_profile_share"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-foreground transition-colors"
-        >
-          🔗 Nossos links
-        </a>
-      </div>
     </div>
   );
 }
