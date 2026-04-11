@@ -15,8 +15,13 @@ import { ClipboardList, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Agendamento, Cliente, Sala } from '@/types';
 import { fetchAgendamentos, fetchClientes, fetchSalas } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function LogsPage() {
+  const { user } = useAuth();
+  const isCliente = user?.isCliente ?? false;
+  const clienteId = user?.clienteId;
+
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [salas, setSalas] = useState<Sala[]>([]);
@@ -41,6 +46,7 @@ export default function LogsPage() {
   const filtered = useMemo(() => {
     return agendamentos
       .filter(a => {
+        if (isCliente && clienteId && a.cliente_id !== clienteId) return false;
         if (filtroSala !== 'all' && a.sala_id !== filtroSala) return false;
         if (filtroData && a.data !== filtroData) return false;
         if (!busca) return true;
@@ -48,7 +54,7 @@ export default function LogsPage() {
         return cliente?.nome_razao_social.toLowerCase().includes(busca.toLowerCase());
       })
       .sort((a, b) => b.data.localeCompare(a.data) || b.hora_inicio.localeCompare(a.hora_inicio));
-  }, [agendamentos, busca, filtroSala, filtroData, clientes]);
+  }, [agendamentos, busca, filtroSala, filtroData, clientes, isCliente, clienteId]);
 
   const paginated = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -63,7 +69,7 @@ export default function LogsPage() {
 
   return (
     <div className="page-container">
-      <PageHeader titulo="Logs de Uso" subtitulo="Registro de reservas, check-in e check-out" />
+      <PageHeader titulo="Logs de Uso" subtitulo={isCliente ? "Seus registros de uso" : "Registro de reservas, check-in e check-out"} />
 
       <div className="flex flex-col sm:flex-row gap-3 items-end">
         <div className="flex-1">
@@ -103,7 +109,7 @@ export default function LogsPage() {
             <TableRow>
               <TableHead>Data</TableHead>
               <TableHead>Sala</TableHead>
-              <TableHead>Cliente</TableHead>
+              {!isCliente && <TableHead>Cliente</TableHead>}
               <TableHead>Horário Reserva</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Check-in</TableHead>
@@ -114,7 +120,7 @@ export default function LogsPage() {
           <TableBody>
             {paginated.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8}>
+                <TableCell colSpan={isCliente ? 7 : 8}>
                   <EmptyState icon={ClipboardList} titulo="Nenhum registro encontrado" descricao="Ajuste os filtros ou aguarde novos agendamentos." />
                 </TableCell>
               </TableRow>
@@ -141,7 +147,7 @@ export default function LogsPage() {
                       {sala?.nome}
                     </div>
                   </TableCell>
-                  <TableCell>{cliente?.nome_razao_social ?? '—'}</TableCell>
+                  {!isCliente && <TableCell>{cliente?.nome_razao_social ?? '—'}</TableCell>}
                   <TableCell className="text-muted-foreground font-mono text-xs">{ag.hora_inicio} – {ag.hora_fim}</TableCell>
                   <TableCell><StatusBadge status={ag.status} /></TableCell>
                   <TableCell className="text-sm">

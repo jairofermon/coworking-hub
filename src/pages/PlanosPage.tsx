@@ -15,8 +15,12 @@ import { PlanoFormDialog } from '@/components/planos/PlanoFormDialog';
 import { PlanoDeleteDialog } from '@/components/planos/PlanoDeleteDialog';
 import { fetchPlanos, upsertPlano, deletePlano, fetchContratos } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function PlanosPage() {
+  const { user } = useAuth();
+  const isCliente = user?.isCliente ?? false;
+
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [busca, setBusca] = useState('');
@@ -68,7 +72,11 @@ export default function PlanosPage() {
 
   return (
     <div className="page-container">
-      <PageHeader titulo="Planos" subtitulo="Configure os planos de locação disponíveis" acaoPrincipal={{ label: 'Novo Plano', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } }} />
+      <PageHeader
+        titulo="Planos"
+        subtitulo={isCliente ? "Planos de locação disponíveis" : "Configure os planos de locação disponíveis"}
+        acaoPrincipal={!isCliente ? { label: 'Novo Plano', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } } : undefined}
+      />
       <FilterBar placeholder="Buscar plano por nome..." value={busca} onChange={setBusca} />
       <Card>
         <Table>
@@ -77,16 +85,16 @@ export default function PlanosPage() {
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
               <TableHead>Horas Previstas</TableHead>
-              <TableHead>Contratos Vinculados</TableHead>
+              {!isCliente && <TableHead>Contratos Vinculados</TableHead>}
               <TableHead>Status</TableHead>
-              <TableHead className="w-12" />
+              {!isCliente && <TableHead className="w-12" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6}>
-                  <EmptyState icon={ListChecks} titulo="Nenhum plano encontrado" descricao={busca ? 'Tente alterar os termos de busca.' : 'Clique em "Novo Plano" para criar.'} />
+                <TableCell colSpan={isCliente ? 4 : 6}>
+                  <EmptyState icon={ListChecks} titulo="Nenhum plano encontrado" descricao={busca ? 'Tente alterar os termos de busca.' : 'Nenhum plano disponível.'} />
                 </TableCell>
               </TableRow>
             )}
@@ -97,26 +105,32 @@ export default function PlanosPage() {
                   <TableCell className="font-medium">{p.nome}</TableCell>
                   <TableCell className="text-muted-foreground">{p.descricao || '—'}</TableCell>
                   <TableCell>{p.horas_previstas > 0 ? `${p.horas_previstas}h` : '—'}</TableCell>
-                  <TableCell className="text-muted-foreground">{ctVinculados}</TableCell>
+                  {!isCliente && <TableCell className="text-muted-foreground">{ctVinculados}</TableCell>}
                   <TableCell><StatusBadge status={p.ativo} /></TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditing(p); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(p); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {!isCliente && (
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setEditing(p); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(p); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
       </Card>
-      <PlanoFormDialog open={formOpen} onOpenChange={setFormOpen} plano={editing} onSave={handleSave} />
-      <PlanoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} plano={deleting} onConfirm={handleDelete} />
+      {!isCliente && (
+        <>
+          <PlanoFormDialog open={formOpen} onOpenChange={setFormOpen} plano={editing} onSave={handleSave} />
+          <PlanoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} plano={deleting} onConfirm={handleDelete} />
+        </>
+      )}
     </div>
   );
 }

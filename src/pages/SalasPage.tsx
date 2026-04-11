@@ -20,6 +20,7 @@ import { SalaDisponibilidadeDialog } from '@/components/salas/SalaDisponibilidad
 import { SalaDetalhesDialog } from '@/components/salas/SalaDetalhesDialog';
 import { fetchSalas, upsertSala, deleteSala, toggleSalaAtivo, fetchDisponibilidades, saveDisponibilidades, fetchContratos, fetchAgendamentos } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
+import { useAuth } from '@/hooks/useAuth';
 
 const DIAS_SEMANA_SHORT: Record<number, string> = {
   0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb',
@@ -32,6 +33,9 @@ const STATUS_FILTERS = [
 ];
 
 export default function SalasPage() {
+  const { user } = useAuth();
+  const isCliente = user?.isCliente ?? false;
+
   const [salas, setSalas] = useState<Sala[]>([]);
   const [disponibilidades, setDisponibilidades] = useState<DisponibilidadeSala[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
@@ -127,9 +131,13 @@ export default function SalasPage() {
 
   return (
     <div className="page-container">
-      <PageHeader titulo="Salas" subtitulo="Gerencie as salas disponíveis para locação" acaoPrincipal={{ label: 'Nova Sala', icon: Plus, onClick: () => { setEditingSala(null); setFormOpen(true); } }} />
+      <PageHeader
+        titulo="Salas"
+        subtitulo={isCliente ? "Visualize as salas disponíveis" : "Gerencie as salas disponíveis para locação"}
+        acaoPrincipal={!isCliente ? { label: 'Nova Sala', icon: Plus, onClick: () => { setEditingSala(null); setFormOpen(true); } } : undefined}
+      />
 
-      {salasSemDisp.length > 0 && (
+      {!isCliente && salasSemDisp.length > 0 && (
         <AlertBanner type="warning">
           {salasSemDisp.length === 1 ? 'A sala' : `${salasSemDisp.length} salas`}{' '}
           <strong>{salasSemDisp.map(s => s.nome).join(', ')}</strong>{' '}
@@ -138,13 +146,15 @@ export default function SalasPage() {
       )}
 
       <FilterBar placeholder="Buscar sala por nome ou descrição..." value={busca} onChange={setBusca}>
-        <div className="flex gap-1">
-          {STATUS_FILTERS.map(f => (
-            <Button key={f.value} variant={filtroStatus === f.value ? 'default' : 'outline'} size="sm" className="h-8 text-xs" onClick={() => setFiltroStatus(f.value)}>
-              {f.label}
-            </Button>
-          ))}
-        </div>
+        {!isCliente && (
+          <div className="flex gap-1">
+            {STATUS_FILTERS.map(f => (
+              <Button key={f.value} variant={filtroStatus === f.value ? 'default' : 'outline'} size="sm" className="h-8 text-xs" onClick={() => setFiltroStatus(f.value)}>
+                {f.label}
+              </Button>
+            ))}
+          </div>
+        )}
       </FilterBar>
 
       <Card>
@@ -157,14 +167,14 @@ export default function SalasPage() {
               <TableHead>Status</TableHead>
               <TableHead>Disponibilidade</TableHead>
               <TableHead>Observação</TableHead>
-              <TableHead className="w-12" />
+              {!isCliente && <TableHead className="w-12" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {salasFiltradas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7}>
-                  <EmptyState icon={DoorOpen} titulo={busca ? 'Nenhuma sala encontrada' : 'Nenhuma sala cadastrada'} descricao={busca ? 'Tente alterar os termos de busca.' : 'Clique em "Nova Sala" para começar.'} />
+                <TableCell colSpan={isCliente ? 6 : 7}>
+                  <EmptyState icon={DoorOpen} titulo={busca ? 'Nenhuma sala encontrada' : 'Nenhuma sala cadastrada'} descricao={busca ? 'Tente alterar os termos de busca.' : 'Nenhuma sala disponível no momento.'} />
                 </TableCell>
               </TableRow>
             )}
@@ -180,7 +190,7 @@ export default function SalasPage() {
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       {sala.nome}
-                      {semDisp && (
+                      {!isCliente && semDisp && (
                         <Tooltip>
                           <TooltipTrigger><AlertTriangle className="h-3.5 w-3.5 text-warning" /></TooltipTrigger>
                           <TooltipContent>Disponibilidade não configurada</TooltipContent>
@@ -210,19 +220,21 @@ export default function SalasPage() {
                     ) : <span className="text-xs text-muted-foreground italic">Não configurada</span>}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">{sala.observacao || '—'}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setDetalhesSala(sala); setDetalhesOpen(true); }}><Eye className="mr-2 h-4 w-4" /> Visualizar</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setEditingSala(sala); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setDispSala(sala); setDispOpen(true); }}><Calendar className="mr-2 h-4 w-4" /> Configurar disponibilidade</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleToggleAtivo(sala)}><Power className="mr-2 h-4 w-4" />{sala.ativo ? 'Desativar' : 'Ativar'}</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeletingSala(sala); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {!isCliente && (
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setDetalhesSala(sala); setDetalhesOpen(true); }}><Eye className="mr-2 h-4 w-4" /> Visualizar</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { setEditingSala(sala); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { setDispSala(sala); setDispOpen(true); }}><Calendar className="mr-2 h-4 w-4" /> Configurar disponibilidade</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleToggleAtivo(sala)}><Power className="mr-2 h-4 w-4" />{sala.ativo ? 'Desativar' : 'Ativar'}</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeletingSala(sala); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
@@ -230,9 +242,13 @@ export default function SalasPage() {
         </Table>
       </Card>
 
-      <SalaFormDialog open={formOpen} onOpenChange={setFormOpen} sala={editingSala} onSave={handleSaveSala} />
-      <SalaDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} sala={deletingSala} onConfirm={handleDelete} />
-      <SalaDisponibilidadeDialog open={dispOpen} onOpenChange={setDispOpen} sala={dispSala} disponibilidades={disponibilidades} onSave={handleSaveDisponibilidade} />
+      {!isCliente && (
+        <>
+          <SalaFormDialog open={formOpen} onOpenChange={setFormOpen} sala={editingSala} onSave={handleSaveSala} />
+          <SalaDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} sala={deletingSala} onConfirm={handleDelete} />
+          <SalaDisponibilidadeDialog open={dispOpen} onOpenChange={setDispOpen} sala={dispSala} disponibilidades={disponibilidades} onSave={handleSaveDisponibilidade} />
+        </>
+      )}
       <SalaDetalhesDialog open={detalhesOpen} onOpenChange={setDetalhesOpen} sala={detalhesSala} disponibilidades={disponibilidades} />
     </div>
   );

@@ -4,7 +4,6 @@ import { FilterBar } from '@/components/FilterBar';
 import { StatusBadge } from '@/components/StatusBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { LoadingState } from '@/components/LoadingState';
-import { TablePagination } from '@/components/TablePagination';
 import { AlertBanner } from '@/components/AlertBanner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
@@ -19,6 +18,7 @@ import { ContratoDeleteDialog } from '@/components/contratos/ContratoDeleteDialo
 import { fetchContratos, upsertContrato, deleteContrato, fetchClientes, fetchSalas, fetchPlanos, fetchFormasPagamento, inactivateExpiredContracts, fetchAgendamentos } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import { generateContratoPdf } from '@/lib/pdf';
+import { useAuth } from '@/hooks/useAuth';
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'Todos' },
@@ -34,6 +34,10 @@ function daysUntilExpiry(dataFim: string): number {
 }
 
 export default function ContratosPage() {
+  const { user } = useAuth();
+  const isCliente = user?.isCliente ?? false;
+  const clienteId = user?.clienteId;
+
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [salas, setSalas] = useState<Sala[]>([]);
@@ -65,6 +69,8 @@ export default function ContratosPage() {
 
   const filtered = useMemo(() => {
     let result = contratos.filter(ct => {
+      // Client can only see their own contracts
+      if (isCliente && clienteId && ct.cliente_id !== clienteId) return false;
       if (filtroStatus !== 'all' && ct.status !== filtroStatus) return false;
       if (!busca) return true;
       const q = busca.toLowerCase();
@@ -79,7 +85,7 @@ export default function ContratosPage() {
       return sortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
     });
     return result;
-  }, [contratos, busca, filtroStatus, clientes, sortField, sortAsc]);
+  }, [contratos, busca, filtroStatus, clientes, sortField, sortAsc, isCliente, clienteId]);
 
   const paginated = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -89,8 +95,9 @@ export default function ContratosPage() {
   useEffect(() => { setPage(1); }, [busca, filtroStatus]);
 
   const contratosProximosVencimento = useMemo(() => {
-    return contratos.filter(c => c.status === 'ativo' && daysUntilExpiry(c.data_fim) <= 15 && daysUntilExpiry(c.data_fim) >= 0);
-  }, [contratos]);
+    const base = isCliente && clienteId ? contratos.filter(c => c.cliente_id === clienteId) : contratos;
+    return base.filter(c => c.status === 'ativo' && daysUntilExpiry(c.data_fim) <= 15 && daysUntilExpiry(c.data_fim) >= 0);
+  }, [contratos, isCliente, clienteId]);
 
   function toggleSort(field: typeof sortField) {
     if (sortField === field) setSortAsc(!sortAsc);
@@ -136,7 +143,11 @@ export default function ContratosPage() {
 
   return (
     <div className="page-container">
-      <PageHeader titulo="Contratos" subtitulo="Controle de contratos de locação" acaoPrincipal={{ label: 'Novo Contrato', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } }} />
+      <PageHeader
+        titulo="Contratos"
+        subtitulo={isCliente ? "Visualize seus contratos" : "Controle de contratos de locação"}
+        acaoPrincipal={!isCliente ? { label: 'Novo Contrato', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } } : undefined}
+      />
 
       {contratosProximosVencimento.length > 0 && (
         <AlertBanner type="warning">
@@ -163,7 +174,7 @@ export default function ContratosPage() {
           <TableHeader>
             <TableRow>
               <SortableHead field="codigo">Código</SortableHead>
-              <TableHead>Cliente</TableHead>
+              {!isCliente && <TableHead>Cliente</TableHead>}
               <TableHead>Sala</TableHead>
               <TableHead>Plano</TableHead>
               <SortableHead field="valor_total">Valor Total</SortableHead>
@@ -171,14 +182,14 @@ export default function ContratosPage() {
               <SortableHead field="data_inicio">Período</SortableHead>
               <TableHead>Status</TableHead>
               <TableHead className="w-10" />
-              <TableHead className="w-12" />
+              {!isCliente && <TableHead className="w-12" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginated.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10}>
-                  <EmptyState icon={FileText} titulo="Nenhum contrato encontrado" descricao={busca ? 'Tente alterar os termos de busca.' : 'Clique em "Novo Contrato" para começar.'} />
+                <TableCell colSpan={isCliente ? 8 : 10}>
+                  <EmptyState icon={FileText} titulo="Nenhum contrato encontrado" descricao={busca ? 'Tente alterar os termos de busca.' : isCliente ? 'Você ainda não possui contratos.' : 'Clique em "Novo Contrato" para começar.'} />
                 </TableCell>
               </TableRow>
             )}
@@ -201,7 +212,7 @@ export default function ContratosPage() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">{cliente?.nome_razao_social}</TableCell>
+                  {!isCliente && <TableCell className="font-medium">{cliente?.nome_razao_social}</TableCell>}
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: sala?.cor_identificacao }} />
@@ -214,23 +225,25 @@ export default function ContratosPage() {
                   <TableCell className="text-muted-foreground text-sm whitespace-nowrap">{new Date(ct.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')} — {new Date(ct.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell><StatusBadge status={ct.status} /></TableCell>
                   <TableCell />
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditing(ct); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {
-                          const cl = clientes.find(c => c.id === ct.cliente_id);
-                          const sl = salas.find(s => s.id === ct.sala_id);
-                          const pl = planos.find(p => p.id === ct.plano_id);
-                          const fp = formas.find(f => f.id === ct.forma_pagamento_id);
-                          if (cl && sl && pl && fp) generateContratoPdf(ct, cl, sl, pl, fp);
-                        }}><FileText className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ct); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {!isCliente && (
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setEditing(ct); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            const cl = clientes.find(c => c.id === ct.cliente_id);
+                            const sl = salas.find(s => s.id === ct.sala_id);
+                            const pl = planos.find(p => p.id === ct.plano_id);
+                            const fp = formas.find(f => f.id === ct.forma_pagamento_id);
+                            if (cl && sl && pl && fp) generateContratoPdf(ct, cl, sl, pl, fp);
+                          }}><FileText className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(ct); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}
@@ -240,8 +253,15 @@ export default function ContratosPage() {
           <TablePagination page={page} totalItems={filtered.length} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
         )}
       </Card>
-      <ContratoFormDialog open={formOpen} onOpenChange={setFormOpen} contrato={editing} onSave={handleSave} clientes={clientes} salas={salas} planos={planos} formasPagamento={formas} />
-      <ContratoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
+      {!isCliente && (
+        <>
+          <ContratoFormDialog open={formOpen} onOpenChange={setFormOpen} contrato={editing} onSave={handleSave} clientes={clientes} salas={salas} planos={planos} formasPagamento={formas} />
+          <ContratoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
+        </>
+      )}
     </div>
   );
 }
+
+// Re-export TablePagination usage
+import { TablePagination } from '@/components/TablePagination';

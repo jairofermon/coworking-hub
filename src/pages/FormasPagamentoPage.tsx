@@ -15,8 +15,12 @@ import { FormaPagamentoFormDialog } from '@/components/formas-pagamento/FormaPag
 import { FormaPagamentoDeleteDialog } from '@/components/formas-pagamento/FormaPagamentoDeleteDialog';
 import { fetchFormasPagamento, upsertFormaPagamento, deleteFormaPagamento, fetchContratos } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function FormasPagamentoPage() {
+  const { user } = useAuth();
+  const isCliente = user?.isCliente ?? false;
+
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [busca, setBusca] = useState('');
@@ -68,7 +72,11 @@ export default function FormasPagamentoPage() {
 
   return (
     <div className="page-container">
-      <PageHeader titulo="Formas de Pagamento" subtitulo="Configure as formas de pagamento aceitas" acaoPrincipal={{ label: 'Nova Forma', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } }} />
+      <PageHeader
+        titulo="Formas de Pagamento"
+        subtitulo={isCliente ? "Formas de pagamento aceitas" : "Configure as formas de pagamento aceitas"}
+        acaoPrincipal={!isCliente ? { label: 'Nova Forma', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } } : undefined}
+      />
       <FilterBar placeholder="Buscar forma de pagamento..." value={busca} onChange={setBusca} />
       <Card>
         <Table>
@@ -80,14 +88,14 @@ export default function FormasPagamentoPage() {
               <TableHead>Tipo</TableHead>
               <TableHead>Parcelamento</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-12" />
+              {!isCliente && <TableHead className="w-12" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7}>
-                  <EmptyState icon={CreditCard} titulo="Nenhuma forma de pagamento encontrada" descricao={busca ? 'Tente alterar os termos de busca.' : 'Clique em "Nova Forma" para criar.'} />
+                <TableCell colSpan={isCliente ? 6 : 7}>
+                  <EmptyState icon={CreditCard} titulo="Nenhuma forma de pagamento encontrada" descricao={busca ? 'Tente alterar os termos de busca.' : 'Nenhuma forma de pagamento disponível.'} />
                 </TableCell>
               </TableRow>
             )}
@@ -99,23 +107,29 @@ export default function FormasPagamentoPage() {
                 <TableCell className="text-muted-foreground">{f.tipo_recebimento || '—'}</TableCell>
                 <TableCell>{f.permite_parcelamento ? 'Sim' : 'Não'}</TableCell>
                 <TableCell><StatusBadge status={f.ativo} /></TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => { setEditing(f); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(f); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+                {!isCliente && (
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => { setEditing(f); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(f); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </Card>
-      <FormaPagamentoFormDialog open={formOpen} onOpenChange={setFormOpen} forma={editing} onSave={handleSave} />
-      <FormaPagamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} forma={deleting} onConfirm={handleDelete} />
+      {!isCliente && (
+        <>
+          <FormaPagamentoFormDialog open={formOpen} onOpenChange={setFormOpen} forma={editing} onSave={handleSave} />
+          <FormaPagamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} forma={deleting} onConfirm={handleDelete} />
+        </>
+      )}
     </div>
   );
 }
