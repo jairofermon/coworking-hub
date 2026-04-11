@@ -267,6 +267,54 @@ export async function deleteAgendamento(id: string) {
   if (error) throw error;
 }
 
+// ── Faturas ──
+
+export async function fetchFaturas(clienteId?: string): Promise<Fatura[]> {
+  let q = supabase.from('faturas').select('*').order('data_vencimento', { ascending: false });
+  if (clienteId) q = q.eq('cliente_id', clienteId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    id: r.id, cliente_id: r.cliente_id, contrato_id: r.contrato_id ?? '',
+    valor: Number(r.valor), data_vencimento: r.data_vencimento,
+    data_pagamento: r.data_pagamento ?? '', status: r.status as Fatura['status'],
+    forma_pagamento: r.forma_pagamento ?? '', observacao: r.observacao ?? '',
+    created_at: r.created_at, updated_at: r.updated_at,
+  }));
+}
+
+export async function upsertFatura(f: Omit<Fatura, 'id' | 'created_at' | 'updated_at'> & { id?: string }): Promise<Fatura> {
+  const payload = {
+    cliente_id: f.cliente_id, contrato_id: f.contrato_id || null,
+    valor: f.valor, data_vencimento: f.data_vencimento,
+    data_pagamento: f.data_pagamento || null, status: f.status,
+    forma_pagamento: f.forma_pagamento, observacao: f.observacao,
+  };
+  if (f.id) {
+    const { data, error } = await supabase.from('faturas').update(payload).eq('id', f.id).select().single();
+    if (error) throw error;
+    return mapFatura(data);
+  }
+  const { data, error } = await supabase.from('faturas').insert(payload).select().single();
+  if (error) throw error;
+  return mapFatura(data);
+}
+
+function mapFatura(r: any): Fatura {
+  return {
+    id: r.id, cliente_id: r.cliente_id, contrato_id: r.contrato_id ?? '',
+    valor: Number(r.valor), data_vencimento: r.data_vencimento,
+    data_pagamento: r.data_pagamento ?? '', status: r.status as Fatura['status'],
+    forma_pagamento: r.forma_pagamento ?? '', observacao: r.observacao ?? '',
+    created_at: r.created_at, updated_at: r.updated_at,
+  };
+}
+
+export async function deleteFatura(id: string) {
+  const { error } = await supabase.from('faturas').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // ── Inativar contratos expirados (client-side fallback) ──
 export async function inactivateExpiredContracts() {
   const today = new Date().toISOString().split('T')[0];
