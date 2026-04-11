@@ -143,6 +143,7 @@ export default function AgendamentosPage() {
       <PageHeader
         titulo="Agendamentos"
         subtitulo={isCliente ? "Visualize seus agendamentos" : "Gerencie reservas e horários das salas"}
+        acaoPrincipal={!isCliente ? { label: 'Novo Agendamento', icon: Plus, onClick: () => { setEditing(null); setFormOpen(true); } } : undefined}
       />
 
       <FilterBar placeholder="Buscar por cliente, sala ou data..." value={busca} onChange={setBusca}>
