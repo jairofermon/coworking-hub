@@ -12,6 +12,7 @@ import {
   ScrollText,
   LogOut,
   UserCircle,
+  Receipt,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -35,6 +36,7 @@ const mainItems = [
   { title: 'Contratos', url: '/contratos', icon: FileText },
   { title: 'Agendamentos', url: '/agendamentos', icon: CalendarDays },
   { title: 'Calendário', url: '/calendario', icon: CalendarRange },
+  { title: 'Faturas', url: '/faturas', icon: Receipt },
 ];
 
 const configItems = [

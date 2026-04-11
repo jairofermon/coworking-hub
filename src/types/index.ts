@@ -81,3 +81,17 @@ export interface Agendamento {
   status: 'confirmado' | 'pendente' | 'cancelado';
   observacao: string;
 }
+
+export interface Fatura {
+  id: string;
+  cliente_id: string;
+  contrato_id: string;
+  valor: number;
+  data_vencimento: string;
+  data_pagamento: string;
+  status: 'pendente' | 'pago' | 'atrasado' | 'cancelado';
+  forma_pagamento: string;
+  observacao: string;
+  created_at: string;
+  updated_at: string;
+}

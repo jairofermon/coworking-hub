@@ -16,6 +16,8 @@ import PlanosPage from "./pages/PlanosPage";
 import FormasPagamentoPage from "./pages/FormasPagamentoPage";
 import MinhaContaPage from "./pages/MinhaContaPage";
 import AuditLogPage from "./pages/AuditLogPage";
+import ClienteDetalhePage from "./pages/ClienteDetalhePage";
+import FaturasPage from "./pages/FaturasPage";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -58,9 +60,11 @@ function AppRoutes() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/salas" element={<SalasPage />} />
         <Route path="/clientes" element={<ClientesPage />} />
+        <Route path="/clientes/:id" element={<ClienteDetalhePage />} />
         <Route path="/contratos" element={<ContratosPage />} />
         <Route path="/agendamentos" element={<AgendamentosPage />} />
         <Route path="/calendario" element={<CalendarioPage />} />
+        <Route path="/faturas" element={<FaturasPage />} />
         <Route path="/configuracoes/planos" element={<PlanosPage />} />
         <Route path="/configuracoes/formas-pagamento" element={<FormasPagamentoPage />} />
         <Route path="/minha-conta" element={<MinhaContaPage />} />

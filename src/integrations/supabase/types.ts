@@ -286,6 +286,48 @@ export type Database = {
           },
         ]
       }
+      faturas: {
+        Row: {
+          cliente_id: string
+          contrato_id: string | null
+          created_at: string
+          data_pagamento: string | null
+          data_vencimento: string
+          forma_pagamento: string | null
+          id: string
+          observacao: string | null
+          status: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          cliente_id: string
+          contrato_id?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento: string
+          forma_pagamento?: string | null
+          id?: string
+          observacao?: string | null
+          status?: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          cliente_id?: string
+          contrato_id?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string
+          forma_pagamento?: string | null
+          id?: string
+          observacao?: string | null
+          status?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       formas_pagamento: {
         Row: {
           ativo: boolean
