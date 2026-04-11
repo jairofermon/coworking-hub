@@ -16,6 +16,7 @@ import {
   Receipt,
   ClipboardList,
   UserPlus,
+  Bell,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
@@ -33,22 +34,6 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-const mainItems = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-  { title: 'Salas', url: '/salas', icon: DoorOpen },
-  { title: 'Clientes', url: '/clientes', icon: Users },
-  { title: 'Contratos', url: '/contratos', icon: FileText },
-  { title: 'Agendamentos', url: '/agendamentos', icon: CalendarDays },
-  { title: 'Calendário', url: '/calendario', icon: CalendarRange },
-  { title: 'Faturas', url: '/faturas', icon: Receipt },
-  { title: 'Logs de Uso', url: '/logs', icon: ClipboardList },
-];
-
-const configItems = [
-  { title: 'Planos', url: '/configuracoes/planos', icon: ListChecks },
-  { title: 'Formas de Pagamento', url: '/configuracoes/formas-pagamento', icon: CreditCard },
-];
-
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
@@ -56,8 +41,11 @@ export function AppSidebar() {
   const { user, signOut } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
 
+  const isAdmin = user?.isAdmin ?? false;
+  const isCliente = user?.isCliente ?? false;
+
   useEffect(() => {
-    if (!user?.isAdmin) return;
+    if (!isAdmin) return;
     async function fetchPending() {
       const { count } = await supabase
         .from('profiles')
@@ -68,7 +56,24 @@ export function AppSidebar() {
     fetchPending();
     const interval = setInterval(fetchPending, 30000);
     return () => clearInterval(interval);
-  }, [user?.isAdmin]);
+  }, [isAdmin]);
+
+  // Build menu items based on role
+  const mainItems = [
+    { title: 'Dashboard', url: '/', icon: LayoutDashboard, show: true },
+    { title: 'Salas', url: '/salas', icon: DoorOpen, show: true },
+    { title: 'Clientes', url: '/clientes', icon: Users, show: !isCliente },
+    { title: 'Contratos', url: '/contratos', icon: FileText, show: true },
+    { title: 'Agendamentos', url: '/agendamentos', icon: CalendarDays, show: true },
+    { title: 'Calendário', url: '/calendario', icon: CalendarRange, show: true },
+    { title: 'Faturas', url: '/faturas', icon: Receipt, show: true },
+    { title: 'Logs de Uso', url: '/logs', icon: ClipboardList, show: true },
+  ].filter(i => i.show);
+
+  const configItems = [
+    { title: 'Planos', url: '/configuracoes/planos', icon: ListChecks },
+    { title: 'Formas de Pagamento', url: '/configuracoes/formas-pagamento', icon: CreditCard },
+  ];
 
   return (
     <Sidebar collapsible="icon">
@@ -107,6 +112,27 @@ export function AppSidebar() {
             </div>
           )}
         </div>
+
+        {/* Admin notification at the top */}
+        {isAdmin && pendingCount > 0 && (
+          <div className="px-3 pt-3">
+            <NavLink to="/admin/usuarios" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
+              <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs">
+                <Bell className="h-4 w-4 text-destructive shrink-0" />
+                {!collapsed && (
+                  <span className="text-destructive font-medium">
+                    {pendingCount} cadastro(s) pendente(s)
+                  </span>
+                )}
+                {collapsed && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-0.5">
+                    {pendingCount}
+                  </span>
+                )}
+              </div>
+            </NavLink>
+          </div>
+        )}
 
         <SidebarGroup>
           <SidebarGroupLabel>Principal</SidebarGroupLabel>
@@ -147,7 +173,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {user?.isAdmin && (
+        {isAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel>
               <ShieldCheck className="mr-2 h-3.5 w-3.5" />
@@ -159,21 +185,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink to="/admin/usuarios" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
                       <UserPlus className="mr-2 h-4 w-4 shrink-0" />
-                      {!collapsed && (
-                        <span className="flex items-center gap-2">
-                          Usuários
-                          {pendingCount > 0 && (
-                            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1">
-                              {pendingCount}
-                            </span>
-                          )}
-                        </span>
-                      )}
-                      {collapsed && pendingCount > 0 && (
-                        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-0.5">
-                          {pendingCount}
-                        </span>
-                      )}
+                      {!collapsed && <span>Usuários</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
