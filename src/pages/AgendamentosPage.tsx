@@ -98,11 +98,6 @@ export default function AgendamentosPage() {
         return;
       }
       const isNew = !ag.id;
-      // Client cannot edit existing
-      if (isCliente && !isNew) {
-        toast.error('Você não pode editar agendamentos.');
-        return;
-      }
       const saved = await upsertAgendamento(ag);
       await logAudit(isNew ? 'criar' : 'editar', 'agendamento', saved.id, { data: saved.data, hora: saved.hora_inicio });
       toast.success(isNew ? 'Agendamento criado com sucesso!' : 'Agendamento atualizado.');
@@ -222,7 +217,7 @@ export default function AgendamentosPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {!isCliente && <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>}
+                        <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                         {!ag.checkin_at && ag.status !== 'cancelado' && (
                           <DropdownMenuItem onClick={() => handleCheckin(ag)}><LogIn className="mr-2 h-4 w-4" /> Check-in</DropdownMenuItem>
                         )}
