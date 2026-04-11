@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Contrato, Cliente, Sala, Plano, FormaPagamento } from '@/types';
 import { toast } from 'sonner';
-import { Search } from 'lucide-react';
+import { Search, AlertTriangle } from 'lucide-react';
 
 interface Props {
   open: boolean;
@@ -48,6 +48,15 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
     setErrors({});
   }, [contrato, open]);
 
+  function isClienteIncomplete(c: Cliente): string[] {
+    const missing: string[] = [];
+    if (!c.cpf_cnpj) missing.push('CPF/CNPJ');
+    if (!c.email) missing.push('E-mail');
+    if (!c.telefone) missing.push('Telefone');
+    if (!c.endereco_completo) missing.push('Endereço');
+    return missing;
+  }
+
   // Filter clients by CPF search
   const filteredClientes = useMemo(() => {
     if (!cpfSearch.trim()) return clientes;
@@ -56,6 +65,7 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
   }, [clientes, cpfSearch]);
 
   const selectedCliente = clientes.find(c => c.id === form.cliente_id);
+  const selectedClienteMissing = selectedCliente ? isClienteIncomplete(selectedCliente) : [];
 
   const fp = formasPagamento.find(f => f.id === form.forma_pagamento_id);
   const valor_taxa = form.desconta_taxa && fp ? (form.valor_total * fp.taxa_percentual) / 100 : 0;
@@ -64,6 +74,9 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
   function handleSave() {
     const e: Record<string, string> = {};
     if (!form.cliente_id) e.cliente_id = 'Selecione um cliente';
+    if (form.cliente_id && selectedClienteMissing.length > 0) {
+      e.cliente_id = `Cadastro incompleto: faltam ${selectedClienteMissing.join(', ')}`;
+    }
     if (!form.sala_id) e.sala_id = 'Selecione uma sala';
     if (!form.plano_id) e.plano_id = 'Selecione um plano';
     if (!form.forma_pagamento_id) e.forma_pagamento_id = 'Selecione uma forma de pagamento';
