@@ -21,7 +21,32 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function ensureProfile(user: User): Promise<void> {
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!existing) {
+    // Profile missing (e.g. Google OAuth user created before trigger)
+    await supabase.from('profiles').insert({
+      user_id: user.id,
+      full_name: user.user_metadata?.full_name ?? '',
+      email: user.email ?? '',
+      approved: false,
+    });
+    // Ensure user role exists
+    await supabase.from('user_roles').upsert(
+      { user_id: user.id, role: 'user' },
+      { onConflict: 'user_id,role' }
+    );
+  }
+}
+
 async function loadAuthUser(user: User): Promise<AuthUser> {
+  await ensureProfile(user);
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, approved')
