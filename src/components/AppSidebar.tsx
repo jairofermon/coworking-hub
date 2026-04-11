@@ -157,6 +157,28 @@ export function AppSidebar() {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
+                    <NavLink to="/admin/usuarios" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
+                      <UserPlus className="mr-2 h-4 w-4 shrink-0" />
+                      {!collapsed && (
+                        <span className="flex items-center gap-2">
+                          Usuários
+                          {pendingCount > 0 && (
+                            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1">
+                              {pendingCount}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {collapsed && pendingCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-0.5">
+                          {pendingCount}
+                        </span>
+                      )}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
                     <NavLink to="/admin/auditoria" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
                       <ScrollText className="mr-2 h-4 w-4 shrink-0" />
                       {!collapsed && <span>Log de Auditoria</span>}
