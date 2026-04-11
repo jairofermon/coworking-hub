@@ -181,8 +181,7 @@ export default function ContratosPage() {
               <TableHead>Valor Líquido</TableHead>
               <SortableHead field="data_inicio">Período</SortableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-10" />
-              {!isCliente && <TableHead className="w-12" />}
+              <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
           <TableBody>
