@@ -128,14 +128,26 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
                 {filteredClientes.length === 0 && (
                   <div className="px-2 py-3 text-sm text-muted-foreground text-center">Nenhum cliente encontrado</div>
                 )}
-                {filteredClientes.map(c => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nome_razao_social} — {c.cpf_cnpj}
-                  </SelectItem>
-                ))}
+                {filteredClientes.map(c => {
+                  const missing = isClienteIncomplete(c);
+                  return (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="flex items-center gap-1.5">
+                        {c.nome_razao_social} — {c.cpf_cnpj || '(sem CPF)'}
+                        {missing.length > 0 && <AlertTriangle className="h-3 w-3 text-warning inline-block" />}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
-            {selectedCliente && (
+            {selectedCliente && selectedClienteMissing.length > 0 && (
+              <p className="text-xs text-warning flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Cadastro incompleto: {selectedClienteMissing.join(', ')}. Complete o cadastro antes de criar o contrato.
+              </p>
+            )}
+            {selectedCliente && selectedClienteMissing.length === 0 && (
               <p className="text-xs text-muted-foreground">CPF/CNPJ: {selectedCliente.cpf_cnpj}</p>
             )}
             {errors.cliente_id && <p className="text-sm text-destructive">{errors.cliente_id}</p>}
