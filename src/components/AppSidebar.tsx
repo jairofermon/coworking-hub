@@ -40,6 +40,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const [pendingCount, setPendingCount] = useState(0);
+  const [incompleteClientCount, setIncompleteClientCount] = useState(0);
 
   const isAdmin = user?.isAdmin ?? false;
   const isCliente = user?.isCliente ?? false;
@@ -57,6 +58,24 @@ export function AppSidebar() {
     const interval = setInterval(fetchPending, 30000);
     return () => clearInterval(interval);
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (isCliente) return;
+    async function fetchIncomplete() {
+      const { data } = await supabase
+        .from('clientes')
+        .select('id, cpf_cnpj, telefone, email, endereco_completo');
+      if (data) {
+        const incomplete = data.filter(c =>
+          !c.cpf_cnpj || !c.telefone || !c.email || !c.endereco_completo
+        );
+        setIncompleteClientCount(incomplete.length);
+      }
+    }
+    fetchIncomplete();
+    const interval = setInterval(fetchIncomplete, 30000);
+    return () => clearInterval(interval);
+  }, [isCliente]);
 
   // Build menu items based on role
   const mainItems = [
@@ -127,6 +146,27 @@ export function AppSidebar() {
                 {collapsed && (
                   <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-0.5">
                     {pendingCount}
+                  </span>
+                )}
+              </div>
+            </NavLink>
+          </div>
+        )}
+
+        {/* Incomplete client registrations notification */}
+        {!isCliente && incompleteClientCount > 0 && (
+          <div className="px-3 pt-2">
+            <NavLink to="/clientes" activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium">
+              <div className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs">
+                <Users className="h-4 w-4 text-warning shrink-0" />
+                {!collapsed && (
+                  <span className="text-warning font-medium">
+                    {incompleteClientCount} cliente(s) com cadastro incompleto
+                  </span>
+                )}
+                {collapsed && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-warning text-warning-foreground text-[9px] font-bold px-0.5">
+                    {incompleteClientCount}
                   </span>
                 )}
               </div>
