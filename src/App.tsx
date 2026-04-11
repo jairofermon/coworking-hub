@@ -21,6 +21,7 @@ import FaturasPage from "./pages/FaturasPage";
 import LogsPage from "./pages/LogsPage";
 import UsuariosPage from "./pages/UsuariosPage";
 import NotFound from "./pages/NotFound";
+import AuthCallback from "./pages/AuthCallback";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route element={<RequireAuth><AdminLayout /></RequireAuth>}>
         <Route path="/" element={<ClienteRedirect><DashboardPage /></ClienteRedirect>} />
         <Route path="/salas" element={<SalasPage />} />
