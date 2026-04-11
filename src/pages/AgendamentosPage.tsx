@@ -246,10 +246,7 @@ export default function AgendamentosPage() {
                   </TableCell>
                 </TableRow>
               );
-            })}
-                </TableRow>
-              );
-            })}
+          </TableBody>
           </TableBody>
         </Table>
         {filtered.length > 0 && (
