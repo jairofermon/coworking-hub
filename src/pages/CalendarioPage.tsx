@@ -126,6 +126,48 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes, cont
   getAgendamentosForDay: (d: Date) => Agendamento[];
   salas: Sala[]; clientes: Cliente[]; contratos: Contrato[];
 }) {
+  // Calculate overlap groups for a list of agendamentos
+  function getOverlapGroups(ags: Agendamento[]) {
+    const sorted = [...ags].sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+    const positions: Map<string, { col: number; totalCols: number }> = new Map();
+    const groups: Agendamento[][] = [];
+
+    for (const ag of sorted) {
+      let placed = false;
+      for (const group of groups) {
+        const overlaps = group.some(g => g.hora_inicio < ag.hora_fim && g.hora_fim > ag.hora_inicio);
+        if (overlaps) {
+          group.push(ag);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) groups.push([ag]);
+    }
+
+    // Merge overlapping groups
+    const mergedGroups: Agendamento[][] = [];
+    for (const group of groups) {
+      const existing = mergedGroups.find(mg => 
+        mg.some(g => group.some(ag => g.hora_inicio < ag.hora_fim && g.hora_fim > ag.hora_inicio))
+      );
+      if (existing) {
+        existing.push(...group);
+      } else {
+        mergedGroups.push([...group]);
+      }
+    }
+
+    for (const group of mergedGroups) {
+      const totalCols = group.length;
+      group.forEach((ag, i) => {
+        positions.set(ag.id, { col: i, totalCols });
+      });
+    }
+
+    return positions;
+  }
+
   return (
     <Card className="overflow-auto">
       <div className="min-w-[600px]">
@@ -146,6 +188,7 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes, cont
               <div className="p-1 text-[10px] text-muted-foreground text-right pr-2 border-r">{String(hour).padStart(2, '0')}:00</div>
               {days.map(day => {
                 const dayAgs = getAgendamentosForDay(day);
+                const positions = getOverlapGroups(dayAgs);
                 const hourAgs = dayAgs.filter(ag => {
                   const startH = parseInt(ag.hora_inicio.split(':')[0]);
                   return startH === hour;
@@ -163,15 +206,20 @@ function WeekDayView({ days, hours, getAgendamentosForDay, salas, clientes, cont
                       const duration = (endH * 60 + endM) - (startH * 60 + startM);
                       const height = Math.max((duration / 60) * 60, 20);
                       const top = (startM / 60) * 60;
+                      const pos = positions.get(ag.id) || { col: 0, totalCols: 1 };
+                      const widthPercent = 100 / pos.totalCols;
+                      const leftPercent = pos.col * widthPercent;
                       return (
                         <div
                           key={ag.id}
-                          className="absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-[10px] leading-tight overflow-hidden cursor-default z-10"
+                          className="absolute rounded px-1 py-0.5 text-[10px] leading-tight overflow-hidden cursor-default z-10"
                           style={{
                             backgroundColor: sala?.cor_identificacao + '20',
                             borderLeft: `3px solid ${sala?.cor_identificacao}`,
                             top: `${top}px`,
                             height: `${height}px`,
+                            left: `${leftPercent}%`,
+                            width: `calc(${widthPercent}% - 2px)`,
                           }}
                           title={`${sala?.nome} · ${cliente?.nome_razao_social} · ${contrato?.codigo || ''} · ${ag.hora_inicio}-${ag.hora_fim}`}
                         >
