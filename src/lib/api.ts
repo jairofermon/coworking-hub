@@ -72,7 +72,7 @@ export async function fetchClientes(): Promise<Cliente[]> {
     nome_razao_social: r.nome_razao_social, especialidade: r.especialidade ?? '',
     data_nascimento: r.data_nascimento ?? '', telefone: r.telefone ?? '', email: r.email ?? '',
     endereco_completo: r.endereco_completo ?? '', chave_pix: r.chave_pix ?? '',
-    observacao: r.observacao ?? '', created_at: r.created_at, updated_at: r.updated_at,
+    observacao: r.observacao ?? '', status_funil: (r as any).status_funil ?? 'lead', created_at: r.created_at, updated_at: r.updated_at,
   }));
 }
 
@@ -82,6 +82,7 @@ export async function upsertCliente(c: Omit<Cliente, 'id' | 'created_at' | 'upda
     nome_razao_social: c.nome_razao_social, especialidade: c.especialidade,
     data_nascimento: c.data_nascimento, telefone: c.telefone, email: c.email,
     endereco_completo: c.endereco_completo, chave_pix: c.chave_pix, observacao: c.observacao,
+    status_funil: c.status_funil,
   };
   if (c.id) {
     const { data, error } = await supabase.from('clientes').update(payload).eq('id', c.id).select().single();
@@ -99,7 +100,7 @@ function mapCliente(r: any): Cliente {
     nome_razao_social: r.nome_razao_social, especialidade: r.especialidade ?? '',
     data_nascimento: r.data_nascimento ?? '', telefone: r.telefone ?? '', email: r.email ?? '',
     endereco_completo: r.endereco_completo ?? '', chave_pix: r.chave_pix ?? '',
-    observacao: r.observacao ?? '', created_at: r.created_at, updated_at: r.updated_at,
+    observacao: r.observacao ?? '', status_funil: (r as any).status_funil ?? 'lead', created_at: r.created_at, updated_at: r.updated_at,
   };
 }
 

@@ -28,6 +28,7 @@ export interface Cliente {
   endereco_completo: string;
   chave_pix: string;
   observacao: string;
+  status_funil: 'lead' | 'free' | 'pago';
   created_at: string;
   updated_at: string;
 }
