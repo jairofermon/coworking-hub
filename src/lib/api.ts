@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Sala, DisponibilidadeSala, Cliente, Plano, FormaPagamento, Contrato, Agendamento } from '@/types';
+import { Sala, DisponibilidadeSala, Cliente, Plano, FormaPagamento, Contrato, Agendamento, Fatura } from '@/types';
 
 // ── Salas ──
 
