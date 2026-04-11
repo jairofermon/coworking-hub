@@ -26,35 +26,21 @@ export default function UsuariosPage() {
 
   async function loadUsers() {
     try {
-      const { data: profiles, error } = await supabase.from('profiles').select('user_id, full_name, approved');
+      const { data: profiles, error } = await supabase.from('profiles').select('user_id, full_name, email, approved');
       if (error) throw error;
 
       const { data: roles } = await supabase.from('user_roles').select('user_id, role');
 
-      // Get emails from auth - we'll use the profiles and match
       const userRows: UserRow[] = (profiles ?? []).map((p: any) => {
         const isAdmin = roles?.some((r: any) => r.user_id === p.user_id && r.role === 'admin') ?? false;
         return {
           user_id: p.user_id,
           full_name: p.full_name || '(sem nome)',
-          email: '', // will be filled below
+          email: p.email || '',
           approved: p.approved,
           isAdmin,
         };
       });
-
-      // Fetch emails via auth admin - not available, so we'll use audit_log or just show user_id
-      // Actually we can get it from the current user's context + audit logs
-      // Simpler: store email in profiles. For now, let's use a workaround
-      // We'll query audit_log for unique emails
-      const { data: auditEmails } = await supabase.from('audit_log').select('user_id, user_email');
-      const emailMap = new Map<string, string>();
-      auditEmails?.forEach((a: any) => { if (a.user_email) emailMap.set(a.user_id, a.user_email); });
-
-      // Also add current user
-      if (currentUser) emailMap.set(currentUser.id, currentUser.email);
-
-      userRows.forEach(u => { u.email = emailMap.get(u.user_id) ?? ''; });
 
       setUsers(userRows);
     } catch (e: any) {

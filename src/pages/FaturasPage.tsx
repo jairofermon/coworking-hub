@@ -116,7 +116,7 @@ export default function FaturasPage() {
       if (!busca) return true;
       const q = busca.toLowerCase();
       const cliente = clientes.find(c => c.id === f.cliente_id);
-      return (cliente?.nome_razao_social.toLowerCase().includes(q)) || f.data_vencimento.includes(busca);
+      return (cliente?.nome_razao_social.toLowerCase().includes(q)) || (cliente?.cpf_cnpj?.toLowerCase().includes(q)) || f.data_vencimento.includes(busca);
     });
   }, [faturas, busca, filtroStatus, clientes]);
 

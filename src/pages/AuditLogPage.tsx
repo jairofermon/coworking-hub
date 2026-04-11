@@ -9,12 +9,18 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface AuditEntry {
   id: string;
+  user_id: string | null;
   user_email: string;
   action: string;
   entity_type: string;
   entity_id: string | null;
   details: any;
   created_at: string;
+}
+
+interface Profile {
+  user_id: string;
+  full_name: string;
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -27,18 +33,19 @@ const ACTION_LABELS: Record<string, string> = {
 
 export default function AuditLogPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const { data, error } = await supabase
-          .from('audit_log')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(200);
+        const [{ data, error }, { data: profs }] = await Promise.all([
+          supabase.from('audit_log').select('*').order('created_at', { ascending: false }).limit(200),
+          supabase.from('profiles').select('user_id, full_name'),
+        ]);
         if (error) throw error;
         setEntries((data ?? []) as AuditEntry[]);
+        setProfiles((profs ?? []) as Profile[]);
       } catch (e: any) {
         toast.error('Erro ao carregar log: ' + e.message);
       } finally {
@@ -71,7 +78,7 @@ export default function AuditLogPage() {
                 <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                   {new Date(e.created_at).toLocaleString('pt-BR')}
                 </TableCell>
-                <TableCell className="text-sm">{e.user_email || '—'}</TableCell>
+                <TableCell className="text-sm">{profiles.find(p => p.user_id === e.user_id)?.full_name || e.user_email || '—'}</TableCell>
                 <TableCell><Badge variant="outline">{ACTION_LABELS[e.action] ?? e.action}</Badge></TableCell>
                 <TableCell className="text-sm capitalize">{e.entity_type}</TableCell>
                 <TableCell className="text-xs text-muted-foreground max-w-[300px] truncate">

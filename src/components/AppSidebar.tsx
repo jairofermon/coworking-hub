@@ -55,14 +55,38 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
-        <div className="flex items-center gap-3 px-4 py-5 border-b border-sidebar-border">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-sm shrink-0">
-            CM
+        <div className="px-4 py-5 border-b border-sidebar-border">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-sm shrink-0">
+              CM
+            </div>
+            {!collapsed && (
+              <span className="text-sm font-semibold text-sidebar-accent-foreground tracking-tight">
+                CM Coworking
+              </span>
+            )}
           </div>
           {!collapsed && (
-            <span className="text-sm font-semibold text-sidebar-accent-foreground tracking-tight">
-              CM Coworking
-            </span>
+            <div className="mt-2 space-y-0.5">
+              <a
+                href="https://maps.google.com/?q=Av.+Jovita+Feitosa,+3184+-+A+-+Parquelândia,+Fortaleza+-+CE,+60455-410"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-1.5 text-[10px] text-muted-foreground hover:text-sidebar-accent-foreground transition-colors"
+              >
+                <span className="shrink-0">📍</span>
+                <span>Av. Jovita Feitosa, 3184-A, Parquelândia</span>
+              </a>
+              <a
+                href="https://linktr.ee/cmcoworking?utm_source=linktree_profile_share"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-sidebar-accent-foreground transition-colors"
+              >
+                <span className="shrink-0">🔗</span>
+                <span>Nossos links</span>
+              </a>
+            </div>
           )}
         </div>
 
@@ -126,30 +150,7 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {/* Links & address */}
         <div className="mt-auto border-t border-sidebar-border">
-          {!collapsed && (
-            <div className="px-3 pt-3 pb-1 space-y-1">
-              <a
-                href="https://maps.google.com/?q=Av.+Jovita+Feitosa,+3184+-+A+-+Parquelândia,+Fortaleza+-+CE,+60455-410"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-start gap-1.5 text-xs text-muted-foreground hover:text-sidebar-accent-foreground transition-colors"
-              >
-                <span className="shrink-0">📍</span>
-                <span>Av. Jovita Feitosa, 3184-A, Parquelândia, Fortaleza-CE</span>
-              </a>
-              <a
-                href="https://linktr.ee/cmcoworking?utm_source=linktree_profile_share"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-sidebar-accent-foreground transition-colors"
-              >
-                <span className="shrink-0">🔗</span>
-                <span>Nossos links</span>
-              </a>
-            </div>
-          )}
           <div className="p-3">
             {!collapsed && user && (
               <p className="text-xs text-muted-foreground truncate mb-2">{user.email}</p>
