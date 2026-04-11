@@ -8,6 +8,8 @@ interface AuthUser {
   fullName: string;
   approved: boolean;
   isAdmin: boolean;
+  isCliente: boolean;
+  clienteId: string | null;
 }
 
 interface AuthContextType {
@@ -29,14 +31,12 @@ async function ensureProfile(user: User): Promise<void> {
     .maybeSingle();
 
   if (!existing) {
-    // Profile missing (e.g. Google OAuth user created before trigger)
     await supabase.from('profiles').insert({
       user_id: user.id,
       full_name: user.user_metadata?.full_name ?? '',
       email: user.email ?? '',
       approved: false,
     });
-    // Ensure user role exists
     await supabase.from('user_roles').upsert(
       { user_id: user.id, role: 'user' },
       { onConflict: 'user_id,role' }
@@ -59,6 +59,17 @@ async function loadAuthUser(user: User): Promise<AuthUser> {
     .eq('user_id', user.id);
 
   const isAdmin = roles?.some((r: any) => r.role === 'admin') ?? false;
+  const isCliente = roles?.some((r: any) => r.role === 'cliente') ?? false;
+
+  let clienteId: string | null = null;
+  if (isCliente) {
+    const { data: cliente } = await supabase
+      .from('clientes')
+      .select('id')
+      .eq('user_id' as any, user.id)
+      .maybeSingle();
+    clienteId = cliente?.id ?? null;
+  }
 
   return {
     id: user.id,
@@ -66,6 +77,8 @@ async function loadAuthUser(user: User): Promise<AuthUser> {
     fullName: profile?.full_name ?? '',
     approved: profile?.approved ?? false,
     isAdmin,
+    isCliente,
+    clienteId,
   };
 }
 
@@ -82,7 +95,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return;
         setSession(session);
         if (session?.user) {
-          // Defer profile fetch to avoid deadlock with onAuthStateChange
           setTimeout(async () => {
             if (!mounted) return;
             try {
