@@ -4,14 +4,29 @@ import { FilterBar } from '@/components/FilterBar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, Loader2, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Cliente } from '@/types';
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog';
 import { ClienteDeleteDialog } from '@/components/clientes/ClienteDeleteDialog';
 import { fetchClientes, upsertCliente, deleteCliente } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
+
+const FUNIL_LABELS: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
+  lead: { label: 'Lead', variant: 'outline' },
+  free: { label: 'Free', variant: 'secondary' },
+  pago: { label: 'Pago', variant: 'default' },
+};
+
+function formatWhatsAppLink(telefone: string): string | null {
+  if (!telefone) return null;
+  const digits = telefone.replace(/\D/g, '');
+  if (digits.length < 10) return null;
+  const num = digits.startsWith('55') ? digits : '55' + digits;
+  return `https://wa.me/${num}`;
+}
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -65,32 +80,47 @@ export default function ClientesPage() {
               <TableHead>Nome / Razão Social</TableHead>
               <TableHead>CPF / CNPJ</TableHead>
               <TableHead>Especialidade</TableHead>
+              <TableHead>Funil</TableHead>
               <TableHead>Telefone</TableHead>
               <TableHead>E-mail</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">{busca ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado.'}</TableCell></TableRow>}
-            {filtered.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell className="font-medium">{c.nome_razao_social}</TableCell>
-                <TableCell className="text-muted-foreground">{c.cpf_cnpj}</TableCell>
-                <TableCell>{c.especialidade}</TableCell>
-                <TableCell className="text-muted-foreground">{c.telefone}</TableCell>
-                <TableCell className="text-muted-foreground">{c.email}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => { setEditing(c); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(c); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
+            {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-10">{busca ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado.'}</TableCell></TableRow>}
+            {filtered.map((c) => {
+              const funil = FUNIL_LABELS[c.status_funil] || FUNIL_LABELS.lead;
+              const waLink = formatWhatsAppLink(c.telefone);
+              return (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.nome_razao_social}</TableCell>
+                  <TableCell className="text-muted-foreground">{c.cpf_cnpj}</TableCell>
+                  <TableCell>{c.especialidade}</TableCell>
+                  <TableCell><Badge variant={funil.variant}>{funil.label}</Badge></TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      {c.telefone}
+                      {waLink && (
+                        <a href={waLink} target="_blank" rel="noopener noreferrer" title="Abrir WhatsApp">
+                          <MessageCircle className="h-4 w-4 text-green-600 hover:text-green-700" />
+                        </a>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{c.email}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => { setEditing(c); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(c); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </Card>
