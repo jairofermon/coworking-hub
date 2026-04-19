@@ -236,6 +236,16 @@ export default function DashboardPage() {
         </Card>
       )}
 
+      {/* Gráficos */}
+      <DashboardCharts
+        salas={salas}
+        contratos={contratosFiltered}
+        agendamentosFiltered={agendamentosFiltered}
+        faturas={faturas}
+        filtroDataInicio={filtroDataInicio}
+        filtroDataFim={filtroDataFim}
+      />
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
