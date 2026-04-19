@@ -196,6 +196,13 @@ export default function FaturasPage() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            const cli = clientes.find(c => c.id === f.cliente_id);
+                            const ct = contratos.find(c => c.id === f.contrato_id) || null;
+                            if (!cli) { toast.error('Cliente não encontrado'); return; }
+                            generateFaturaPdf(f, cli, ct);
+                          }}><FileDown className="mr-2 h-4 w-4" /> Gerar PDF</DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => openForm(f)}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(f); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
