@@ -1,4 +1,4 @@
-import { Contrato, Cliente, Sala, Plano, FormaPagamento, Agendamento } from '@/types';
+import { Contrato, Cliente, Sala, Plano, FormaPagamento, Agendamento, Fatura } from '@/types';
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
@@ -43,8 +43,66 @@ const baseStyle = `
     .badge-cancelado { background: #fee2e2; color: #991b1b; }
     .badge-confirmado { background: #dcfce7; color: #166534; }
     .badge-pendente { background: #fef3c7; color: #92400e; }
+    .badge-pago { background: #dcfce7; color: #166534; }
+    .badge-atrasado { background: #fee2e2; color: #991b1b; }
   </style>
 `;
+
+export function generateFaturaPdf(
+  fatura: Fatura,
+  cliente: Cliente,
+  contrato?: Contrato | null,
+) {
+  const statusLabel = fatura.status.charAt(0).toUpperCase() + fatura.status.slice(1);
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">${baseStyle}</head><body>
+    <div class="header">
+      <h1>CM Coworking</h1>
+      <p>Fatura</p>
+    </div>
+    <div class="section">
+      <h2>Dados da Fatura</h2>
+      <table>
+        <tr><td>Status:</td><td><span class="badge badge-${fatura.status}">${statusLabel}</span></td></tr>
+        <tr><td>Vencimento:</td><td><strong>${formatDate(fatura.data_vencimento)}</strong></td></tr>
+        ${fatura.data_pagamento ? `<tr><td>Data do pagamento:</td><td>${formatDate(fatura.data_pagamento)}</td></tr>` : ''}
+        ${fatura.forma_pagamento ? `<tr><td>Forma de pagamento:</td><td>${fatura.forma_pagamento}</td></tr>` : ''}
+      </table>
+    </div>
+    <div class="section">
+      <h2>Cliente</h2>
+      <table>
+        <tr><td>Nome/Razão Social:</td><td>${cliente.nome_razao_social}</td></tr>
+        <tr><td>CPF/CNPJ:</td><td>${cliente.cpf_cnpj}</td></tr>
+        ${cliente.email ? `<tr><td>E-mail:</td><td>${cliente.email}</td></tr>` : ''}
+        ${cliente.telefone ? `<tr><td>Telefone:</td><td>${cliente.telefone}</td></tr>` : ''}
+        ${cliente.endereco_completo ? `<tr><td>Endereço:</td><td>${cliente.endereco_completo}</td></tr>` : ''}
+      </table>
+    </div>
+    ${contrato ? `
+    <div class="section">
+      <h2>Contrato</h2>
+      <table>
+        <tr><td>Código:</td><td>${contrato.codigo}</td></tr>
+        <tr><td>Período:</td><td>${formatDate(contrato.data_inicio)} a ${formatDate(contrato.data_fim)}</td></tr>
+      </table>
+    </div>
+    ` : ''}
+    <div class="section">
+      <h2>Valor</h2>
+      <div class="financial">
+        <table>
+          <tr class="total"><td>Total a pagar:</td><td>${formatCurrency(Number(fatura.valor) || 0)}</td></tr>
+        </table>
+      </div>
+    </div>
+    ${fatura.observacao ? `<div class="section"><h2>Observação</h2><div class="obs">${fatura.observacao}</div></div>` : ''}
+    <div class="footer">
+      Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')} — CM Coworking
+    </div>
+  </body></html>`;
+
+  openPdfWindow(html, `Fatura ${cliente.nome_razao_social} ${formatDate(fatura.data_vencimento)}`);
+}
 
 export function generateContratoPdf(
   contrato: Contrato,
