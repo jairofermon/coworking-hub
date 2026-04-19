@@ -215,7 +215,7 @@ export default function FaturasPage() {
       {!isCliente && (
         <>
           <Dialog open={formOpen} onOpenChange={setFormOpen}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editing ? 'Editar Fatura' : 'Nova Fatura'}</DialogTitle>
                 <DialogDescription>Preencha os dados da fatura abaixo.</DialogDescription>
