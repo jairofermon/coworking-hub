@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { DoorOpen, Users, FileText, CalendarDays, TrendingUp, Clock, Lightbulb, AlertTriangle, BarChart3, Receipt, X } from 'lucide-react';
 import { fetchSalas, fetchClientes, fetchContratos, fetchAgendamentos, fetchDisponibilidades, fetchFaturas, inactivateExpiredContracts } from '@/lib/api';
 import { Sala, Cliente, Contrato, Agendamento, DisponibilidadeSala, Fatura } from '@/types';
+import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
 
 function calcHours(hi: string, hf: string): number {
   if (!hi || !hf) return 0;
@@ -234,6 +235,16 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Gráficos */}
+      <DashboardCharts
+        salas={salas}
+        contratos={contratosFiltered}
+        agendamentosFiltered={agendamentosFiltered}
+        faturas={faturas}
+        filtroDataInicio={filtroDataInicio}
+        filtroDataFim={filtroDataFim}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
