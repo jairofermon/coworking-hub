@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Contrato, Cliente, Sala, Plano, FormaPagamento } from '@/types';
 import { toast } from 'sonner';
-import { Search, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { ClienteSearchSelect } from '@/components/ClienteSearchSelect';
 
 interface Props {
   open: boolean;
@@ -29,7 +30,6 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
     status: 'ativo' as Contrato['status'], observacao: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [cpfSearch, setCpfSearch] = useState('');
 
   useEffect(() => {
     if (contrato) {
@@ -39,11 +39,8 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
         desconta_taxa: contrato.desconta_taxa, data_inicio: contrato.data_inicio,
         data_fim: contrato.data_fim, status: contrato.status, observacao: contrato.observacao,
       });
-      const cl = clientes.find(c => c.id === contrato.cliente_id);
-      setCpfSearch(cl?.cpf_cnpj || '');
     } else {
       setForm({ cliente_id: '', sala_id: '', plano_id: '', forma_pagamento_id: '', valor_total: 0, desconta_taxa: false, data_inicio: '', data_fim: '', status: 'ativo', observacao: '' });
-      setCpfSearch('');
     }
     setErrors({});
   }, [contrato, open]);
@@ -56,13 +53,6 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
     if (!c.endereco_completo) missing.push('Endereço');
     return missing;
   }
-
-  // Filter clients by CPF search
-  const filteredClientes = useMemo(() => {
-    if (!cpfSearch.trim()) return clientes;
-    const search = cpfSearch.replace(/\D/g, '');
-    return clientes.filter(c => c.cpf_cnpj.replace(/\D/g, '').includes(search));
-  }, [clientes, cpfSearch]);
 
   const selectedCliente = clientes.find(c => c.id === form.cliente_id);
   const selectedClienteMissing = selectedCliente ? isClienteIncomplete(selectedCliente) : [];
@@ -101,54 +91,19 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{isEdit ? 'Editar Contrato' : 'Novo Contrato'}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-2">
-          {/* CPF Search + Client selector */}
           <div className="sm:col-span-2 space-y-2">
-            <Label>Buscar Cliente por CPF/CNPJ</Label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Digite o CPF ou CNPJ para filtrar..."
-                value={cpfSearch}
-                onChange={e => setCpfSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
             <Label>Cliente *</Label>
-            <Select value={form.cliente_id} onValueChange={v => {
-              f('cliente_id', v);
-              const cl = clientes.find(c => c.id === v);
-              if (cl) setCpfSearch(cl.cpf_cnpj);
-            }}>
-              <SelectTrigger className={errors.cliente_id ? 'border-destructive' : ''}>
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredClientes.length === 0 && (
-                  <div className="px-2 py-3 text-sm text-muted-foreground text-center">Nenhum cliente encontrado</div>
-                )}
-                {filteredClientes.map(c => {
-                  const missing = isClienteIncomplete(c);
-                  return (
-                    <SelectItem key={c.id} value={c.id}>
-                      <span className="flex items-center gap-1.5">
-                        {c.nome_razao_social} — {c.cpf_cnpj || '(sem CPF)'}
-                        {missing.length > 0 && <AlertTriangle className="h-3 w-3 text-warning inline-block" />}
-                      </span>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+            <ClienteSearchSelect
+              clientes={clientes}
+              value={form.cliente_id}
+              onChange={v => f('cliente_id', v)}
+              error={errors.cliente_id}
+            />
             {selectedCliente && selectedClienteMissing.length > 0 && (
               <p className="text-xs text-warning flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
                 Cadastro incompleto: {selectedClienteMissing.join(', ')}. Complete o cadastro antes de criar o contrato.
               </p>
-            )}
-            {selectedCliente && selectedClienteMissing.length === 0 && (
-              <p className="text-xs text-muted-foreground">CPF/CNPJ: {selectedCliente.cpf_cnpj}</p>
             )}
             {errors.cliente_id && <p className="text-sm text-destructive">{errors.cliente_id}</p>}
           </div>
