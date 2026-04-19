@@ -9,7 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Pencil, Trash2, Receipt, ArrowUpDown } from 'lucide-react';
+import { Plus, MoreHorizontal, Pencil, Trash2, Receipt, ArrowUpDown, FileDown } from 'lucide-react';
+import { generateFaturaPdf } from '@/lib/pdf';
 import { toast } from 'sonner';
 import { Fatura, Cliente, Contrato, FormaPagamento } from '@/types';
 import { fetchFaturas, upsertFatura, deleteFatura, fetchClientes, fetchContratos, fetchFormasPagamento } from '@/lib/api';
