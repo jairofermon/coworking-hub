@@ -1,4 +1,4 @@
-import { Contrato, Cliente, Sala, Plano, FormaPagamento, Agendamento } from '@/types';
+import { Contrato, Cliente, Sala, Plano, FormaPagamento, Agendamento, Fatura } from '@/types';
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
