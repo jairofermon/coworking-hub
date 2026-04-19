@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Contrato, Cliente, Sala, Plano, FormaPagamento } from '@/types';
 import { toast } from 'sonner';
-import { Search, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { ClienteSearchSelect } from '@/components/ClienteSearchSelect';
 
 interface Props {
   open: boolean;
