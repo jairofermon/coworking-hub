@@ -30,7 +30,6 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
     status: 'ativo' as Contrato['status'], observacao: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [cpfSearch, setCpfSearch] = useState('');
 
   useEffect(() => {
     if (contrato) {
@@ -40,11 +39,8 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
         desconta_taxa: contrato.desconta_taxa, data_inicio: contrato.data_inicio,
         data_fim: contrato.data_fim, status: contrato.status, observacao: contrato.observacao,
       });
-      const cl = clientes.find(c => c.id === contrato.cliente_id);
-      setCpfSearch(cl?.cpf_cnpj || '');
     } else {
       setForm({ cliente_id: '', sala_id: '', plano_id: '', forma_pagamento_id: '', valor_total: 0, desconta_taxa: false, data_inicio: '', data_fim: '', status: 'ativo', observacao: '' });
-      setCpfSearch('');
     }
     setErrors({});
   }, [contrato, open]);
@@ -57,13 +53,6 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
     if (!c.endereco_completo) missing.push('Endereço');
     return missing;
   }
-
-  // Filter clients by CPF search
-  const filteredClientes = useMemo(() => {
-    if (!cpfSearch.trim()) return clientes;
-    const search = cpfSearch.replace(/\D/g, '');
-    return clientes.filter(c => c.cpf_cnpj.replace(/\D/g, '').includes(search));
-  }, [clientes, cpfSearch]);
 
   const selectedCliente = clientes.find(c => c.id === form.cliente_id);
   const selectedClienteMissing = selectedCliente ? isClienteIncomplete(selectedCliente) : [];
