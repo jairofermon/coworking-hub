@@ -26,11 +26,11 @@ import { buildContratoFaturamentoMap, formatCurrency, getContratoFaturamentoResu
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'Todas' },
-  { value: 'incompletas', label: 'Com pendência' },
   { value: 'em_revisao', label: 'Em Revisão' },
+  { value: 'atrasado', label: 'Atrasadas' },
+  { value: 'incompletas', label: 'Com pendência' },
   { value: 'pendente', label: 'Pendentes' },
   { value: 'pago', label: 'Pagas' },
-  { value: 'atrasado', label: 'Atrasadas' },
   { value: 'cancelado', label: 'Canceladas' },
 ];
 
