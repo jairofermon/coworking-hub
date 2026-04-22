@@ -328,23 +328,7 @@ export async function fetchFaturas(clienteId?: string): Promise<Fatura[]> {
     if (updateError) throw updateError;
   }
 
-  const faturasVisiveis = (data ?? []).filter((fatura: any) => {
-    const isReviewWithoutContrato = fatura.status === 'em_revisao' && !fatura.contrato_id;
-
-    if (!isReviewWithoutContrato) return true;
-
-    const hasLinkedDuplicate = (data ?? []).some(
-      (candidate: any) =>
-        candidate.id !== fatura.id &&
-        candidate.status === 'em_revisao' &&
-        candidate.contrato_id &&
-        candidate.cliente_id === fatura.cliente_id &&
-        Number(candidate.valor) === Number(fatura.valor) &&
-        candidate.data_vencimento === fatura.data_vencimento,
-    );
-
-    return !hasLinkedDuplicate;
-  });
+  const faturasVisiveis = dedupeContratoReviewInvoices(data ?? []);
 
   return faturasVisiveis.map((r: any) => ({
     id: r.id, cliente_id: r.cliente_id, contrato_id: r.contrato_id ?? '',
@@ -399,6 +383,7 @@ async function syncContratoReviewInvoice(contrato: Contrato) {
     .from('faturas')
     .select('*')
     .eq('status', 'em_revisao')
+    .eq('cliente_id', contrato.cliente_id)
     .order('created_at', { ascending: true });
 
   if (error) throw error;
@@ -414,29 +399,49 @@ async function syncContratoReviewInvoice(contrato: Contrato) {
     observacao: 'Fatura criada automaticamente a partir do contrato.',
   };
 
-  const reviewInvoice = data?.find((fatura: any) => fatura.contrato_id === contrato.id);
-  if (reviewInvoice) {
-    const { error: updateError } = await supabase.from('faturas').update(payload).eq('id', reviewInvoice.id);
-    if (updateError) throw updateError;
-    return;
-  }
-
-  const orphanReviewInvoice = data?.find(
+  const relatedInvoices = (data ?? []).filter(
     (fatura: any) =>
-      !fatura.contrato_id &&
-      fatura.cliente_id === contrato.cliente_id &&
-      Number(fatura.valor) === Number(contrato.valor_total) &&
-      fatura.data_vencimento === contrato.data_inicio,
+      fatura.contrato_id === contrato.id ||
+      (!fatura.contrato_id &&
+        Number(fatura.valor) === Number(contrato.valor_total) &&
+        fatura.data_vencimento === contrato.data_inicio),
   );
 
-  if (orphanReviewInvoice) {
-    const { error: updateError } = await supabase.from('faturas').update(payload).eq('id', orphanReviewInvoice.id);
+  const prioritizedInvoice = relatedInvoices.find((fatura: any) => fatura.contrato_id === contrato.id) ?? relatedInvoices[0];
+
+  if (prioritizedInvoice) {
+    const { error: updateError } = await supabase.from('faturas').update(payload).eq('id', prioritizedInvoice.id);
     if (updateError) throw updateError;
+
+    const duplicateIds = relatedInvoices
+      .filter((fatura: any) => fatura.id !== prioritizedInvoice.id)
+      .map((fatura: any) => fatura.id);
+
+    if (duplicateIds.length > 0) {
+      const { error: deleteError } = await supabase.from('faturas').delete().in('id', duplicateIds);
+      if (deleteError) throw deleteError;
+    }
+
     return;
   }
 
   const { error: insertError } = await supabase.from('faturas').insert(payload);
   if (insertError) throw insertError;
+}
+
+function dedupeContratoReviewInvoices(faturas: any[]) {
+  const linkedReviewKeys = new Set(
+    faturas
+      .filter((fatura) => fatura.status === 'em_revisao' && fatura.contrato_id)
+      .map((fatura) => `${fatura.cliente_id}::${Number(fatura.valor)}::${fatura.data_vencimento}`),
+  );
+
+  return faturas.filter((fatura) => {
+    if (fatura.status !== 'em_revisao' || fatura.contrato_id) return true;
+
+    const key = `${fatura.cliente_id}::${Number(fatura.valor)}::${fatura.data_vencimento}`;
+    return !linkedReviewKeys.has(key);
+  });
 }
 
 async function validateContratoInvoiceLimit(
