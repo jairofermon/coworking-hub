@@ -54,12 +54,12 @@ export function PlanoFormDialog({ open, onOpenChange, plano, onSave }: Props) {
           </div>
           <div className="space-y-2">
             <Label>Valor Previsto (R$) *</Label>
-            <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm(f => ({ ...f, valor_previsto: e.target.value }))} className={errors.valor_previsto ? 'border-destructive' : ''} />
+            <Input type="number" step="0.01" min="0.01" required placeholder="0,00" value={form.valor_previsto} onChange={e => { setForm(f => ({ ...f, valor_previsto: e.target.value })); setErrors(prev => ({ ...prev, valor_previsto: '' })); }} className={errors.valor_previsto ? 'border-destructive' : ''} />
             {errors.valor_previsto && <p className="text-sm text-destructive">{errors.valor_previsto}</p>}
           </div>
           <div className="space-y-2">
             <Label>Horas Previstas *</Label>
-            <Input type="number" step="0.5" min="0" placeholder="0" value={form.horas_previstas} onChange={e => setForm(f => ({ ...f, horas_previstas: e.target.value }))} className={errors.horas_previstas ? 'border-destructive' : ''} />
+            <Input type="number" step="0.5" min="0.5" required placeholder="0" value={form.horas_previstas} onChange={e => { setForm(f => ({ ...f, horas_previstas: e.target.value })); setErrors(prev => ({ ...prev, horas_previstas: '' })); }} className={errors.horas_previstas ? 'border-destructive' : ''} />
             {errors.horas_previstas && <p className="text-sm text-destructive">{errors.horas_previstas}</p>}
             <p className="text-xs text-muted-foreground">Quantidade de horas que o plano permite agendar no período do contrato</p>
           </div>
