@@ -26,7 +26,13 @@ export function PlanoFormDialog({ open, onOpenChange, plano, onSave }: Props) {
   }, [plano, open]);
 
   function handleSave() {
-    if (!form.nome.trim()) { setErrors({ nome: 'Nome é obrigatório' }); return; }
+    const nextErrors: Record<string, string> = {};
+    if (!form.nome.trim()) nextErrors.nome = 'Nome é obrigatório';
+    if (!form.valor_previsto || Number(form.valor_previsto) <= 0) nextErrors.valor_previsto = 'Valor previsto é obrigatório';
+    if (!form.horas_previstas || Number(form.horas_previstas) <= 0) nextErrors.horas_previstas = 'Horas previstas é obrigatório';
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     onSave({ ...(plano?.id ? { id: plano.id } : {}), ...form, valor_previsto: Number(form.valor_previsto) || 0, horas_previstas: Number(form.horas_previstas) || 0 } as any);
     toast.success(isEdit ? 'Plano atualizado!' : 'Plano criado!');
     onOpenChange(false);
@@ -47,12 +53,14 @@ export function PlanoFormDialog({ open, onOpenChange, plano, onSave }: Props) {
             <Input value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} />
           </div>
           <div className="space-y-2">
-            <Label>Valor Previsto (R$)</Label>
-            <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm(f => ({ ...f, valor_previsto: e.target.value }))} />
+            <Label>Valor Previsto (R$) *</Label>
+            <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm(f => ({ ...f, valor_previsto: e.target.value }))} className={errors.valor_previsto ? 'border-destructive' : ''} />
+            {errors.valor_previsto && <p className="text-sm text-destructive">{errors.valor_previsto}</p>}
           </div>
           <div className="space-y-2">
-            <Label>Horas Previstas</Label>
-            <Input type="number" step="0.5" min="0" placeholder="0" value={form.horas_previstas} onChange={e => setForm(f => ({ ...f, horas_previstas: e.target.value }))} />
+            <Label>Horas Previstas *</Label>
+            <Input type="number" step="0.5" min="0" placeholder="0" value={form.horas_previstas} onChange={e => setForm(f => ({ ...f, horas_previstas: e.target.value }))} className={errors.horas_previstas ? 'border-destructive' : ''} />
+            {errors.horas_previstas && <p className="text-sm text-destructive">{errors.horas_previstas}</p>}
             <p className="text-xs text-muted-foreground">Quantidade de horas que o plano permite agendar no período do contrato</p>
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3">
