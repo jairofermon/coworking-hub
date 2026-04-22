@@ -246,13 +246,13 @@ export default function FaturasPage() {
               <TableHead>Pagamento</TableHead>
               <TableHead>Forma</TableHead>
               <TableHead>Status</TableHead>
-              {!isCliente && <TableHead className="w-12" />}
+              <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginated.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isCliente ? 6 : 8}>
+                <TableCell colSpan={isCliente ? 7 : 8}>
                   <EmptyState icon={Receipt} titulo="Nenhuma fatura encontrada" descricao={busca ? 'Tente alterar os termos de busca.' : isCliente ? 'Você ainda não possui faturas.' : 'Clique em "Nova Fatura" para criar.'} />
                 </TableCell>
               </TableRow>
@@ -278,8 +278,22 @@ export default function FaturasPage() {
                       )}
                     </div>
                   </TableCell>
-                  {!isCliente && (
-                    <TableCell>
+                  <TableCell>
+                    {isCliente ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          const cli = clientes.find(c => c.id === f.cliente_id);
+                          const ct = contratos.find(c => c.id === f.contrato_id) || null;
+                          if (!cli) { toast.error('Cliente não encontrado'); return; }
+                          generateFaturaPdf(f, cli, ct);
+                        }}
+                      >
+                        <FileDown className="h-4 w-4" />
+                      </Button>
+                    ) : (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -295,8 +309,8 @@ export default function FaturasPage() {
                           <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setDeleting(f); setDeleteOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </TableCell>
-                  )}
+                    )}
+                  </TableCell>
                 </TableRow>
               );
             })}
