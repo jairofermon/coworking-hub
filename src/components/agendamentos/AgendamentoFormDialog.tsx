@@ -5,11 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
 import { ClienteSearchSelect } from '@/components/ClienteSearchSelect';
 import { Agendamento, Cliente, Sala, Contrato, Plano, DisponibilidadeSala } from '@/types';
 import { toast } from 'sonner';
-import { Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Clock, Clock3, AlertTriangle, CalendarDays, CheckCircle2 } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -22,6 +27,7 @@ interface Props {
   agendamentos: Agendamento[];
   planos: Plano[];
   disponibilidades: DisponibilidadeSala[];
+  isClienteAccess?: boolean;
 }
 
 function calcHours(horaInicio: string, horaFim: string): number {
@@ -31,7 +37,19 @@ function calcHours(horaInicio: string, horaFim: string): number {
   return Math.max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60);
 }
 
-export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave, clientes, salas, contratos, agendamentos, planos, disponibilidades }: Props) {
+const TIME_OPTIONS = Array.from({ length: 24 * 12 }, (_, index) => {
+  const totalMinutes = index * 5;
+  const hours = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+  const minutes = String(totalMinutes % 60).padStart(2, '0');
+  return `${hours}:${minutes}`;
+});
+
+function formatDisplayDate(value: string) {
+  if (!value) return 'dd/mm/aaaa';
+  return format(parseISO(value), 'dd/MM/yyyy', { locale: ptBR });
+}
+
+export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave, clientes, salas, contratos, agendamentos, planos, disponibilidades, isClienteAccess = false }: Props) {
   const isEdit = !!agendamento;
   const [form, setForm] = useState({
     sala_id: '', cliente_id: '', contrato_id: '', data: '', hora_inicio: '', hora_fim: '',
@@ -287,18 +305,74 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
 
           <div className="space-y-2">
             <Label>Data *</Label>
-            <Input type="date" lang="pt-BR" value={form.data} onChange={e => f('data', e.target.value)} className={errors.data ? 'border-destructive' : ''} />
+            {isClienteAccess ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-between text-left font-normal',
+                      !form.data && 'text-muted-foreground',
+                      errors.data && 'border-destructive'
+                    )}
+                  >
+                    <span>{formatDisplayDate(form.data)}</span>
+                    <CalendarDays className="h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    locale={ptBR}
+                    selected={form.data ? parseISO(form.data) : undefined}
+                    onSelect={(date) => f('data', date ? format(date, 'yyyy-MM-dd') : '')}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <Input type="date" lang="pt-BR" value={form.data} onChange={e => f('data', e.target.value)} className={errors.data ? 'border-destructive' : ''} />
+            )}
             {errors.data && <p className="text-sm text-destructive">{errors.data}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Hora Início *</Label>
-              <Input type="time" lang="pt-BR" step="60" value={form.hora_inicio} onChange={e => f('hora_inicio', e.target.value)} className={errors.hora_inicio ? 'border-destructive' : ''} />
+              {isClienteAccess ? (
+                <Select value={form.hora_inicio} onValueChange={v => f('hora_inicio', v)}>
+                  <SelectTrigger className={errors.hora_inicio ? 'border-destructive' : ''}>
+                    <div className="flex items-center gap-2">
+                      <Clock3 className="h-4 w-4 text-muted-foreground" />
+                      <SelectValue placeholder="--:--" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_OPTIONS.map((time) => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input type="time" lang="pt-BR" step="60" value={form.hora_inicio} onChange={e => f('hora_inicio', e.target.value)} className={errors.hora_inicio ? 'border-destructive' : ''} />
+              )}
               {errors.hora_inicio && <p className="text-sm text-destructive">{errors.hora_inicio}</p>}
             </div>
             <div className="space-y-2">
               <Label>Hora Fim *</Label>
-              <Input type="time" lang="pt-BR" step="60" value={form.hora_fim} onChange={e => f('hora_fim', e.target.value)} className={errors.hora_fim ? 'border-destructive' : ''} />
+              {isClienteAccess ? (
+                <Select value={form.hora_fim} onValueChange={v => f('hora_fim', v)}>
+                  <SelectTrigger className={errors.hora_fim ? 'border-destructive' : ''}>
+                    <div className="flex items-center gap-2">
+                      <Clock3 className="h-4 w-4 text-muted-foreground" />
+                      <SelectValue placeholder="--:--" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_OPTIONS.map((time) => <SelectItem key={time} value={time}>{time}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input type="time" lang="pt-BR" step="60" value={form.hora_fim} onChange={e => f('hora_fim', e.target.value)} className={errors.hora_fim ? 'border-destructive' : ''} />
+              )}
               {errors.hora_fim && <p className="text-sm text-destructive">{errors.hora_fim}</p>}
             </div>
           </div>
