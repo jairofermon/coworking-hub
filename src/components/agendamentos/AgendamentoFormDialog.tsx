@@ -52,9 +52,66 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
     setErrors({});
   }, [agendamento, open]);
 
-  const contratosClienteSala = contratos.filter(
-    c => c.cliente_id === form.cliente_id && c.sala_id === form.sala_id && c.status === 'ativo'
-  );
+  const contratosElegiveis = useMemo(() => {
+    return contratos
+      .filter((contrato) => {
+        if (contrato.cliente_id !== form.cliente_id || contrato.status !== 'ativo') return false;
+
+        const plano = planos.find((item) => item.id === contrato.plano_id);
+        const horasPrevistasContrato = plano?.horas_previstas ?? 0;
+
+        if (horasPrevistasContrato <= 0) return true;
+
+        const horasUsadasContrato = agendamentos
+          .filter((ag) => {
+            if (ag.status === 'cancelado') return false;
+            if (isEdit && ag.id === agendamento?.id) return false;
+            return ag.contrato_id === contrato.id;
+          })
+          .reduce((sum, ag) => sum + calcHours(ag.hora_inicio, ag.hora_fim), 0);
+
+        return horasUsadasContrato < horasPrevistasContrato;
+      })
+      .map((contrato) => {
+        const plano = planos.find((item) => item.id === contrato.plano_id);
+        const horasPrevistasContrato = plano?.horas_previstas ?? 0;
+        const horasUsadasContrato = agendamentos
+          .filter((ag) => {
+            if (ag.status === 'cancelado') return false;
+            if (isEdit && ag.id === agendamento?.id) return false;
+            return ag.contrato_id === contrato.id;
+          })
+          .reduce((sum, ag) => sum + calcHours(ag.hora_inicio, ag.hora_fim), 0);
+
+        return {
+          contrato,
+          horasDisponiveis: Math.max(0, horasPrevistasContrato - horasUsadasContrato),
+          horasPrevistas: horasPrevistasContrato,
+        };
+      });
+  }, [contratos, form.cliente_id, planos, agendamentos, isEdit, agendamento]);
+
+  const salasElegiveis = useMemo(() => {
+    const salaIds = new Set(contratosElegiveis.map(({ contrato }) => contrato.sala_id));
+
+    return salas.filter((sala) => {
+      if (!sala.ativo) return false;
+      if (isEdit && sala.id === agendamento?.sala_id) return true;
+      return salaIds.has(sala.id);
+    });
+  }, [salas, contratosElegiveis, isEdit, agendamento]);
+
+  const contratosClienteSala = contratosElegiveis
+    .filter(({ contrato }) => contrato.sala_id === form.sala_id)
+    .map(({ contrato }) => contrato);
+
+  const salaAtualInvalida = Boolean(form.sala_id) && !salasElegiveis.some((sala) => sala.id === form.sala_id);
+
+  useEffect(() => {
+    if (salaAtualInvalida) {
+      setForm((prev) => ({ ...prev, sala_id: '', contrato_id: '' }));
+    }
+  }, [salaAtualInvalida]);
 
   // Hour usage calculation
   const selectedContrato = contratos.find(c => c.id === form.contrato_id);
@@ -167,8 +224,11 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
               <Label>Sala *</Label>
               <Select value={form.sala_id} onValueChange={v => { f('sala_id', v); f('contrato_id', ''); }}>
                 <SelectTrigger className={errors.sala_id ? 'border-destructive' : ''}><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>{salas.filter(s => s.ativo).map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {salasElegiveis.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
+                </SelectContent>
               </Select>
+              {form.cliente_id && salasElegiveis.length === 0 && <p className="text-sm text-muted-foreground">Esse cliente não possui contrato ativo com horas disponíveis.</p>}
               {errors.sala_id && <p className="text-sm text-destructive">{errors.sala_id}</p>}
             </div>
           </div>
