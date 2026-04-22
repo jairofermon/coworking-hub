@@ -18,19 +18,19 @@ interface Props {
 export function FormaPagamentoFormDialog({ open, onOpenChange, forma, onSave }: Props) {
   const isEdit = !!forma;
   const [form, setForm] = useState({
-    nome: '', taxa_percentual: 0, dias_recebimento: 0, tipo_recebimento: '', permite_parcelamento: false, observacao: '', ativo: true,
+    nome: '', taxa_percentual: '', dias_recebimento: '', tipo_recebimento: '', permite_parcelamento: false, observacao: '', ativo: true,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (forma) setForm({ nome: forma.nome, taxa_percentual: forma.taxa_percentual, dias_recebimento: forma.dias_recebimento, tipo_recebimento: forma.tipo_recebimento, permite_parcelamento: forma.permite_parcelamento, observacao: forma.observacao, ativo: forma.ativo });
-    else setForm({ nome: '', taxa_percentual: 0, dias_recebimento: 0, tipo_recebimento: '', permite_parcelamento: false, observacao: '', ativo: true });
+    if (forma) setForm({ nome: forma.nome, taxa_percentual: forma.taxa_percentual ? String(forma.taxa_percentual) : '', dias_recebimento: forma.dias_recebimento ? String(forma.dias_recebimento) : '', tipo_recebimento: forma.tipo_recebimento, permite_parcelamento: forma.permite_parcelamento, observacao: forma.observacao, ativo: forma.ativo });
+    else setForm({ nome: '', taxa_percentual: '', dias_recebimento: '', tipo_recebimento: '', permite_parcelamento: false, observacao: '', ativo: true });
     setErrors({});
   }, [forma, open]);
 
   function handleSave() {
     if (!form.nome.trim()) { setErrors({ nome: 'Nome é obrigatório' }); return; }
-    onSave({ ...(forma?.id ? { id: forma.id } : {}), ...form } as any);
+    onSave({ ...(forma?.id ? { id: forma.id } : {}), ...form, taxa_percentual: Number(form.taxa_percentual) || 0, dias_recebimento: Number(form.dias_recebimento) || 0 } as any);
     toast.success(isEdit ? 'Forma de pagamento atualizada!' : 'Forma de pagamento criada!');
     onOpenChange(false);
   }
@@ -50,11 +50,11 @@ export function FormaPagamentoFormDialog({ open, onOpenChange, forma, onSave }: 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Taxa (%)</Label>
-              <Input type="number" step="0.1" value={form.taxa_percentual} onChange={e => f('taxa_percentual', parseFloat(e.target.value) || 0)} />
+              <Input type="number" step="0.1" min="0" placeholder="0" value={form.taxa_percentual} onChange={e => f('taxa_percentual', e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Dias p/ Recebimento</Label>
-              <Input type="number" value={form.dias_recebimento} onChange={e => f('dias_recebimento', parseInt(e.target.value) || 0)} />
+              <Input type="number" min="0" placeholder="0" value={form.dias_recebimento} onChange={e => f('dias_recebimento', e.target.value)} />
             </div>
           </div>
           <div className="space-y-2">

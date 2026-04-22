@@ -88,6 +88,10 @@ export default function FaturasPage() {
     if (!form.cliente_id) e.cliente_id = 'Selecione um cliente';
     if (!form.valor || Number(form.valor) <= 0) e.valor = 'Informe um valor válido';
     if (!form.data_vencimento) e.data_vencimento = 'Informe a data de vencimento';
+    if (contratoSelecionado && totalComFaturaAtual > contratoSelecionado.valor_total) {
+      const excedente = totalComFaturaAtual - contratoSelecionado.valor_total;
+      e.valor = `O contrato permite até R$ ${contratoSelecionado.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Excedente: R$ ${excedente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    }
     setErrors(e);
     if (Object.keys(e).length > 0) return;
 
@@ -101,6 +105,9 @@ export default function FaturasPage() {
       const saved = await upsertFatura(payload);
       await logAudit(isNew ? 'criar' : 'editar', 'fatura', saved.id, { valor: saved.valor });
       toast.success(isNew ? 'Fatura criada com sucesso!' : 'Fatura atualizada.');
+      if (contratoSelecionado && valorPendenteContrato > 0) {
+        toast.warning(`Contrato de R$ ${contratoSelecionado.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Ainda falta faturar R$ ${valorPendenteContrato.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`);
+      }
       setFormOpen(false);
       await loadData();
     } catch (err: any) { toast.error('Erro ao salvar: ' + err.message); }
@@ -136,6 +143,15 @@ export default function FaturasPage() {
   useEffect(() => { setPage(1); }, [busca, filtroStatus]);
 
   const contratosCliente = contratos.filter(c => c.cliente_id === form.cliente_id);
+  const contratoSelecionado = contratos.find(c => c.id === form.contrato_id);
+  const totalFaturadoNoContrato = contratoSelecionado
+    ? faturas
+        .filter(f => f.contrato_id === contratoSelecionado.id && f.status !== 'cancelado' && f.id !== editing?.id)
+        .reduce((sum, f) => sum + f.valor, 0)
+    : 0;
+  const valorAtualFatura = Number(form.valor) || 0;
+  const totalComFaturaAtual = totalFaturadoNoContrato + valorAtualFatura;
+  const valorPendenteContrato = contratoSelecionado ? Math.max(contratoSelecionado.valor_total - totalComFaturaAtual, 0) : 0;
 
   if (loading) return <LoadingState />;
 
@@ -248,6 +264,14 @@ export default function FaturasPage() {
                       {contratosCliente.map(c => <SelectItem key={c.id} value={c.id}>{c.codigo}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {contratoSelecionado && (
+                    <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+                      <div className="flex items-center justify-between gap-3"><span>Valor do contrato</span><span className="font-medium text-foreground">R$ {contratoSelecionado.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>Já faturado</span><span>R$ {totalFaturadoNoContrato.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>Após esta fatura</span><span>R$ {totalComFaturaAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                      <div className="flex items-center justify-between gap-3 border-t pt-1"><span>Falta faturar</span><span className="font-medium text-foreground">R$ {valorPendenteContrato.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                    </div>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">

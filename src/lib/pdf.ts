@@ -84,6 +84,7 @@ export function generateFaturaPdf(
       <table>
         <tr><td>Código:</td><td>${contrato.codigo}</td></tr>
         <tr><td>Período:</td><td>${formatDate(contrato.data_inicio)} a ${formatDate(contrato.data_fim)}</td></tr>
+        <tr><td>Valor previsto:</td><td>${formatCurrency(contrato.valor_total)}</td></tr>
       </table>
     </div>
     ` : ''}

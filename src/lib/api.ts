@@ -123,7 +123,13 @@ export async function fetchPlanos(): Promise<Plano[]> {
 }
 
 export async function upsertPlano(p: Omit<Plano, 'id'> & { id?: string }): Promise<Plano> {
-  const payload = { nome: p.nome, descricao: p.descricao, horas_previstas: p.horas_previstas, ativo: p.ativo } as any;
+  const payload = {
+    nome: p.nome,
+    descricao: p.descricao,
+    valor_previsto: p.valor_previsto,
+    horas_previstas: p.horas_previstas,
+    ativo: p.ativo,
+  } as any;
   if (p.id) {
     const { data, error } = await supabase.from('planos').update(payload).eq('id', p.id).select().single();
     if (error) throw error;
