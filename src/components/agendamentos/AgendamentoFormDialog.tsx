@@ -16,7 +16,6 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   agendamento?: Agendamento | null;
   onSave: (ag: Agendamento) => void;
-  isClienteAccess?: boolean;
   clientes: Cliente[];
   salas: Sala[];
   contratos: Contrato[];
@@ -32,39 +31,7 @@ function calcHours(horaInicio: string, horaFim: string): number {
   return Math.max(0, (h2 * 60 + m2 - h1 * 60 - m1) / 60);
 }
 
-function formatDateToDisplay(value: string) {
-  if (!value) return '';
-  const [year, month, day] = value.split('-');
-  if (!year || !month || !day) return value;
-  return `${day}/${month}/${year}`;
-}
-
-function parseDisplayDate(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 8);
-  const day = digits.slice(0, 2);
-  const month = digits.slice(2, 4);
-  const year = digits.slice(4, 8);
-
-  if (digits.length <= 2) return day;
-  if (digits.length <= 4) return `${day}/${month}`;
-  return `${day}/${month}/${year}`;
-}
-
-function normalizeDisplayDate(value: string) {
-  const [day, month, year] = value.split('/');
-  if (!day || !month || !year || year.length !== 4) return '';
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-}
-
-function parseDisplayTime(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 4);
-  const hour = digits.slice(0, 2);
-  const minute = digits.slice(2, 4);
-  if (digits.length <= 2) return hour;
-  return `${hour}:${minute}`;
-}
-
-export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave, isClienteAccess = false, clientes, salas, contratos, agendamentos, planos, disponibilidades }: Props) {
+export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave, clientes, salas, contratos, agendamentos, planos, disponibilidades }: Props) {
   const isEdit = !!agendamento;
   const [form, setForm] = useState({
     sala_id: '', cliente_id: '', contrato_id: '', data: '', hora_inicio: '', hora_fim: '',
@@ -76,16 +43,14 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
     if (agendamento) {
       setForm({
         sala_id: agendamento.sala_id, cliente_id: agendamento.cliente_id, contrato_id: agendamento.contrato_id,
-        data: isClienteAccess ? formatDateToDisplay(agendamento.data) : agendamento.data,
-        hora_inicio: agendamento.hora_inicio,
-        hora_fim: agendamento.hora_fim,
+        data: agendamento.data, hora_inicio: agendamento.hora_inicio, hora_fim: agendamento.hora_fim,
         status: agendamento.status, observacao: agendamento.observacao,
       });
     } else {
       setForm({ sala_id: '', cliente_id: '', contrato_id: '', data: '', hora_inicio: '', hora_fim: '', status: 'pendente', observacao: '' });
     }
     setErrors({});
-  }, [agendamento, open, isClienteAccess]);
+  }, [agendamento, open]);
 
   const contratosElegiveis = useMemo(() => {
     return contratos
@@ -168,11 +133,10 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
   const horasDisponivel = Math.max(0, horasPrevistas - horasUsadas);
 
   function handleSave() {
-    const normalizedDate = isClienteAccess ? normalizeDisplayDate(form.data) : form.data;
     const e: Record<string, string> = {};
     if (!form.sala_id) e.sala_id = 'Selecione uma sala';
     if (!form.cliente_id) e.cliente_id = 'Selecione um cliente';
-    if (!normalizedDate) e.data = 'Informe a data';
+    if (!form.data) e.data = 'Informe a data';
     if (!form.hora_inicio) e.hora_inicio = 'Informe o horário de início';
     if (!form.hora_fim) e.hora_fim = 'Informe o horário de fim';
     if (form.hora_inicio && form.hora_fim && form.hora_inicio >= form.hora_fim) e.hora_fim = 'Horário fim deve ser maior que início';
@@ -187,17 +151,17 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
       }
     }
 
-    if (form.contrato_id && form.contrato_id !== 'none' && normalizedDate) {
+    if (form.contrato_id && form.contrato_id !== 'none' && form.data) {
       const contrato = contratos.find(c => c.id === form.contrato_id);
-      if (contrato && (normalizedDate < contrato.data_inicio || normalizedDate > contrato.data_fim)) {
+      if (contrato && (form.data < contrato.data_inicio || form.data > contrato.data_fim)) {
         e.data = `Data fora do período do contrato (${new Date(contrato.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(contrato.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')})`;
       }
     }
 
-    if (form.sala_id && normalizedDate && form.hora_inicio && form.hora_fim) {
+    if (form.sala_id && form.data && form.hora_inicio && form.hora_fim) {
       const conflito = agendamentos.find(ag => {
         if (isEdit && ag.id === agendamento?.id) return false;
-        return ag.sala_id === form.sala_id && ag.data === normalizedDate &&
+        return ag.sala_id === form.sala_id && ag.data === form.data &&
           ag.hora_inicio < form.hora_fim && ag.hora_fim > form.hora_inicio;
       });
       if (conflito) {
@@ -207,8 +171,8 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
     }
 
     // Validate against sala availability
-    if (form.sala_id && normalizedDate && form.hora_inicio && form.hora_fim && !e.hora_inicio) {
-      const date = new Date(normalizedDate + 'T00:00:00');
+    if (form.sala_id && form.data && form.hora_inicio && form.hora_fim && !e.hora_inicio) {
+      const date = new Date(form.data + 'T00:00:00');
       const diaSemana = date.getDay(); // 0=Dom, 1=Seg...
       const salaDisps = disponibilidades.filter(d => d.sala_id === form.sala_id && d.dia_semana === diaSemana && d.ativo);
       if (salaDisps.length === 0) {
@@ -231,7 +195,7 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
     setErrors(e);
     if (Object.keys(e).length > 0) return;
 
-    onSave({ ...(agendamento?.id ? { id: agendamento.id } : {}), ...form, data: normalizedDate } as any);
+    onSave({ ...(agendamento?.id ? { id: agendamento.id } : {}), ...form } as any);
     toast.success(isEdit ? 'Agendamento atualizado!' : 'Agendamento criado!');
     onOpenChange(false);
   }
@@ -323,39 +287,18 @@ export function AgendamentoFormDialog({ open, onOpenChange, agendamento, onSave,
 
           <div className="space-y-2">
             <Label>Data *</Label>
-            <Input
-              type={isClienteAccess ? 'text' : 'date'}
-              inputMode={isClienteAccess ? 'numeric' : undefined}
-              placeholder={isClienteAccess ? 'dd/mm/aaaa' : undefined}
-              value={form.data}
-              onChange={e => f('data', isClienteAccess ? parseDisplayDate(e.target.value) : e.target.value)}
-              className={errors.data ? 'border-destructive' : ''}
-            />
+            <Input type="date" lang="pt-BR" value={form.data} onChange={e => f('data', e.target.value)} className={errors.data ? 'border-destructive' : ''} />
             {errors.data && <p className="text-sm text-destructive">{errors.data}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Hora Início *</Label>
-              <Input
-                type={isClienteAccess ? 'text' : 'time'}
-                inputMode={isClienteAccess ? 'numeric' : undefined}
-                placeholder={isClienteAccess ? '00:00' : undefined}
-                value={form.hora_inicio}
-                onChange={e => f('hora_inicio', isClienteAccess ? parseDisplayTime(e.target.value) : e.target.value)}
-                className={errors.hora_inicio ? 'border-destructive' : ''}
-              />
+              <Input type="time" lang="pt-BR" step="60" value={form.hora_inicio} onChange={e => f('hora_inicio', e.target.value)} className={errors.hora_inicio ? 'border-destructive' : ''} />
               {errors.hora_inicio && <p className="text-sm text-destructive">{errors.hora_inicio}</p>}
             </div>
             <div className="space-y-2">
               <Label>Hora Fim *</Label>
-              <Input
-                type={isClienteAccess ? 'text' : 'time'}
-                inputMode={isClienteAccess ? 'numeric' : undefined}
-                placeholder={isClienteAccess ? '00:00' : undefined}
-                value={form.hora_fim}
-                onChange={e => f('hora_fim', isClienteAccess ? parseDisplayTime(e.target.value) : e.target.value)}
-                className={errors.hora_fim ? 'border-destructive' : ''}
-              />
+              <Input type="time" lang="pt-BR" step="60" value={form.hora_fim} onChange={e => f('hora_fim', e.target.value)} className={errors.hora_fim ? 'border-destructive' : ''} />
               {errors.hora_fim && <p className="text-sm text-destructive">{errors.hora_fim}</p>}
             </div>
           </div>
