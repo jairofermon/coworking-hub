@@ -316,7 +316,25 @@ export async function fetchFaturas(clienteId?: string): Promise<Fatura[]> {
     if (updateError) throw updateError;
   }
 
-  return (data ?? []).map((r: any) => ({
+  const faturasVisiveis = (data ?? []).filter((fatura: any) => {
+    const isReviewWithoutContrato = fatura.status === 'em_revisao' && !fatura.contrato_id;
+
+    if (!isReviewWithoutContrato) return true;
+
+    const hasLinkedDuplicate = (data ?? []).some(
+      (candidate: any) =>
+        candidate.id !== fatura.id &&
+        candidate.status === 'em_revisao' &&
+        candidate.contrato_id &&
+        candidate.cliente_id === fatura.cliente_id &&
+        Number(candidate.valor) === Number(fatura.valor) &&
+        candidate.data_vencimento === fatura.data_vencimento,
+    );
+
+    return !hasLinkedDuplicate;
+  });
+
+  return faturasVisiveis.map((r: any) => ({
     id: r.id, cliente_id: r.cliente_id, contrato_id: r.contrato_id ?? '',
     valor: Number(r.valor), data_vencimento: r.data_vencimento,
     data_pagamento: r.data_pagamento ?? '',
@@ -368,16 +386,10 @@ async function syncContratoReviewInvoice(contrato: Contrato) {
   const { data, error } = await supabase
     .from('faturas')
     .select('*')
-    .eq('contrato_id', contrato.id)
     .eq('status', 'em_revisao')
     .order('created_at', { ascending: true });
 
   if (error) throw error;
-
-  const reviewInvoice = data?.[0];
-  if (reviewInvoice) {
-    return;
-  }
 
   const payload = {
     cliente_id: contrato.cliente_id,
@@ -389,6 +401,27 @@ async function syncContratoReviewInvoice(contrato: Contrato) {
     forma_pagamento: '',
     observacao: 'Fatura criada automaticamente a partir do contrato.',
   };
+
+  const reviewInvoice = data?.find((fatura: any) => fatura.contrato_id === contrato.id);
+  if (reviewInvoice) {
+    const { error: updateError } = await supabase.from('faturas').update(payload).eq('id', reviewInvoice.id);
+    if (updateError) throw updateError;
+    return;
+  }
+
+  const orphanReviewInvoice = data?.find(
+    (fatura: any) =>
+      !fatura.contrato_id &&
+      fatura.cliente_id === contrato.cliente_id &&
+      Number(fatura.valor) === Number(contrato.valor_total) &&
+      fatura.data_vencimento === contrato.data_inicio,
+  );
+
+  if (orphanReviewInvoice) {
+    const { error: updateError } = await supabase.from('faturas').update(payload).eq('id', orphanReviewInvoice.id);
+    if (updateError) throw updateError;
+    return;
+  }
 
   const { error: insertError } = await supabase.from('faturas').insert(payload);
   if (insertError) throw insertError;
