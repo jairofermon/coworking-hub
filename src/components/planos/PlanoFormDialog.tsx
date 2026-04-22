@@ -16,25 +16,25 @@ interface Props {
 
 export function PlanoFormDialog({ open, onOpenChange, plano, onSave }: Props) {
   const isEdit = !!plano;
-  const [form, setForm] = useState({ nome: '', descricao: '', valor_previsto: 0, horas_previstas: 0, ativo: true });
+  const [form, setForm] = useState({ nome: '', descricao: '', valor_previsto: '', horas_previstas: '', ativo: true });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (plano) setForm({ nome: plano.nome, descricao: plano.descricao, valor_previsto: plano.valor_previsto, horas_previstas: plano.horas_previstas, ativo: plano.ativo });
-    else setForm({ nome: '', descricao: '', valor_previsto: 0, horas_previstas: 0, ativo: true });
+    if (plano) setForm({ nome: plano.nome, descricao: plano.descricao, valor_previsto: plano.valor_previsto ? String(plano.valor_previsto) : '', horas_previstas: plano.horas_previstas ? String(plano.horas_previstas) : '', ativo: plano.ativo });
+    else setForm({ nome: '', descricao: '', valor_previsto: '', horas_previstas: '', ativo: true });
     setErrors({});
   }, [plano, open]);
 
   function handleSave() {
     if (!form.nome.trim()) { setErrors({ nome: 'Nome é obrigatório' }); return; }
-    onSave({ ...(plano?.id ? { id: plano.id } : {}), ...form } as any);
+    onSave({ ...(plano?.id ? { id: plano.id } : {}), ...form, valor_previsto: Number(form.valor_previsto) || 0, horas_previstas: Number(form.horas_previstas) || 0 } as any);
     toast.success(isEdit ? 'Plano atualizado!' : 'Plano criado!');
     onOpenChange(false);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{isEdit ? 'Editar Plano' : 'Novo Plano'}</DialogTitle></DialogHeader>
         <div className="space-y-4 py-2">
           <div className="space-y-2">
@@ -48,11 +48,11 @@ export function PlanoFormDialog({ open, onOpenChange, plano, onSave }: Props) {
           </div>
           <div className="space-y-2">
             <Label>Valor Previsto (R$)</Label>
-            <Input type="number" step="0.01" value={form.valor_previsto} onChange={e => setForm(f => ({ ...f, valor_previsto: parseFloat(e.target.value) || 0 }))} />
+            <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.valor_previsto} onChange={e => setForm(f => ({ ...f, valor_previsto: e.target.value }))} />
           </div>
           <div className="space-y-2">
             <Label>Horas Previstas</Label>
-            <Input type="number" step="0.5" min="0" value={form.horas_previstas} onChange={e => setForm(f => ({ ...f, horas_previstas: parseFloat(e.target.value) || 0 }))} />
+            <Input type="number" step="0.5" min="0" placeholder="0" value={form.horas_previstas} onChange={e => setForm(f => ({ ...f, horas_previstas: e.target.value }))} />
             <p className="text-xs text-muted-foreground">Quantidade de horas que o plano permite agendar no período do contrato</p>
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3">

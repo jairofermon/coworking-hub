@@ -26,7 +26,7 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
   const isEdit = !!contrato;
   const [form, setForm] = useState({
     cliente_id: '', sala_id: '', plano_id: '', forma_pagamento_id: '',
-    valor_total: 0, desconta_taxa: false, data_inicio: '', data_fim: '',
+    valor_total: '', desconta_taxa: false, data_inicio: '', data_fim: '',
     status: 'ativo' as Contrato['status'], observacao: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -35,12 +35,12 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
     if (contrato) {
       setForm({
         cliente_id: contrato.cliente_id, sala_id: contrato.sala_id, plano_id: contrato.plano_id,
-        forma_pagamento_id: contrato.forma_pagamento_id, valor_total: contrato.valor_total,
+          forma_pagamento_id: contrato.forma_pagamento_id, valor_total: contrato.valor_total ? String(contrato.valor_total) : '',
         desconta_taxa: contrato.desconta_taxa, data_inicio: contrato.data_inicio,
         data_fim: contrato.data_fim, status: contrato.status, observacao: contrato.observacao,
       });
     } else {
-      setForm({ cliente_id: '', sala_id: '', plano_id: '', forma_pagamento_id: '', valor_total: 0, desconta_taxa: false, data_inicio: '', data_fim: '', status: 'ativo', observacao: '' });
+        setForm({ cliente_id: '', sala_id: '', plano_id: '', forma_pagamento_id: '', valor_total: '', desconta_taxa: false, data_inicio: '', data_fim: '', status: 'ativo', observacao: '' });
     }
     setErrors({});
   }, [contrato, open]);
@@ -57,9 +57,11 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
   const selectedCliente = clientes.find(c => c.id === form.cliente_id);
   const selectedClienteMissing = selectedCliente ? isClienteIncomplete(selectedCliente) : [];
 
+  const selectedPlano = planos.find(p => p.id === form.plano_id);
   const fp = formasPagamento.find(f => f.id === form.forma_pagamento_id);
-  const valor_taxa = form.desconta_taxa && fp ? (form.valor_total * fp.taxa_percentual) / 100 : 0;
-  const valor_liquido = form.valor_total - valor_taxa;
+  const valorTotalNumber = Number(form.valor_total) || 0;
+  const valor_taxa = form.desconta_taxa && fp ? (valorTotalNumber * fp.taxa_percentual) / 100 : 0;
+  const valor_liquido = valorTotalNumber - valor_taxa;
 
   function handleSave() {
     const e: Record<string, string> = {};
@@ -72,13 +74,13 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
     if (!form.forma_pagamento_id) e.forma_pagamento_id = 'Selecione uma forma de pagamento';
     if (!form.data_inicio) e.data_inicio = 'Informe a data de início';
     if (!form.data_fim) e.data_fim = 'Informe a data de fim';
-    if (form.valor_total <= 0) e.valor_total = 'Informe o valor total';
+    if (valorTotalNumber <= 0) e.valor_total = 'Informe o valor total';
     setErrors(e);
     if (Object.keys(e).length > 0) return;
 
     onSave({
       ...(contrato?.id ? { id: contrato.id } : {}),
-      ...form, valor_taxa, valor_liquido,
+        ...form, valor_total: valorTotalNumber, valor_taxa, valor_liquido,
     } as any);
     toast.success(isEdit ? 'Contrato atualizado!' : 'Contrato criado!');
     onOpenChange(false);
@@ -117,7 +119,10 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
           </div>
           <div className="space-y-2">
             <Label>Plano *</Label>
-            <Select value={form.plano_id} onValueChange={v => f('plano_id', v)}>
+            <Select value={form.plano_id} onValueChange={v => {
+              const planoSelecionado = planos.find(p => p.id === v);
+              setForm(prev => ({ ...prev, plano_id: v, valor_total: planoSelecionado?.valor_previsto ? String(planoSelecionado.valor_previsto) : '' }));
+            }}>
               <SelectTrigger className={errors.plano_id ? 'border-destructive' : ''}><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>{planos.filter(p => p.ativo).map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}</SelectContent>
             </Select>
@@ -133,7 +138,8 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
           </div>
           <div className="space-y-2">
             <Label>Valor Total (R$) *</Label>
-            <Input type="number" step="0.01" value={form.valor_total} onChange={e => f('valor_total', parseFloat(e.target.value) || 0)} className={errors.valor_total ? 'border-destructive' : ''} />
+            <Input type="number" step="0.01" min="0" placeholder="0,00" value={form.valor_total} readOnly disabled className={errors.valor_total ? 'border-destructive' : ''} />
+            {selectedPlano && <p className="text-xs text-muted-foreground">Valor definido automaticamente pelo plano selecionado.</p>}
             {errors.valor_total && <p className="text-sm text-destructive">{errors.valor_total}</p>}
           </div>
           <div className="space-y-2">
@@ -165,7 +171,7 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
             <Switch checked={form.desconta_taxa} onCheckedChange={v => f('desconta_taxa', v)} />
           </div>
           <div className="sm:col-span-2 rounded-lg bg-muted/50 p-3 text-sm">
-            <div className="flex justify-between"><span>Valor Total:</span><span className="font-medium">R$ {form.valor_total.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>Valor Total:</span><span className="font-medium">R$ {valorTotalNumber.toFixed(2)}</span></div>
             {form.desconta_taxa && <div className="flex justify-between text-muted-foreground"><span>Taxa:</span><span>- R$ {valor_taxa.toFixed(2)}</span></div>}
             <div className="flex justify-between font-semibold border-t mt-1 pt-1"><span>Valor Líquido:</span><span>R$ {valor_liquido.toFixed(2)}</span></div>
           </div>
