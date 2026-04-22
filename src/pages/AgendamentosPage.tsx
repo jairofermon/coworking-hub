@@ -92,6 +92,10 @@ export default function AgendamentosPage() {
 
   async function handleSave(ag: Agendamento) {
     try {
+      if (isCliente && ag.id) {
+        toast.error('Clientes não podem editar agendamentos.');
+        return;
+      }
       // Client can only create for themselves
       if (isCliente && clienteId && ag.cliente_id !== clienteId) {
         toast.error('Você só pode criar agendamentos para a sua conta.');
@@ -217,7 +221,7 @@ export default function AgendamentosPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                        {!isCliente && <DropdownMenuItem onClick={() => { setEditing(ag); setFormOpen(true); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>}
                         {!ag.checkin_at && ag.status !== 'cancelado' && (
                           <DropdownMenuItem onClick={() => handleCheckin(ag)}><LogIn className="mr-2 h-4 w-4" /> Check-in</DropdownMenuItem>
                         )}
@@ -250,7 +254,7 @@ export default function AgendamentosPage() {
         )}
       </Card>
 
-      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientesForForm} salas={salas} contratos={contratosForForm} agendamentos={agendamentos} planos={planos} disponibilidades={disponibilidades} />
+      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} isClienteAccess={isCliente} clientes={clientesForForm} salas={salas} contratos={contratosForForm} agendamentos={agendamentos} planos={planos} disponibilidades={disponibilidades} />
       {!isCliente && <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />}
     </div>
   );
