@@ -205,15 +205,24 @@ export default function FaturasPage() {
             {paginated.map(f => {
               const cliente = clientes.find(c => c.id === f.cliente_id);
               const contrato = contratos.find(c => c.id === f.contrato_id);
+              const resumoContrato = f.contrato_id ? faturamentoPorContrato[f.contrato_id] : undefined;
+              const contratoIncompleto = Boolean(resumoContrato?.incompleto);
               return (
-                <TableRow key={f.id}>
+                <TableRow key={f.id} className={contratoIncompleto ? 'bg-destructive/10 hover:bg-destructive/15' : undefined}>
                   {!isCliente && <TableCell className="font-medium">{cliente?.nome_razao_social ?? '—'}</TableCell>}
                   <TableCell className="font-mono text-xs">{contrato?.codigo || '—'}</TableCell>
                   <TableCell className="font-medium">R$ {f.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell className="whitespace-nowrap">{new Date(f.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell className="text-muted-foreground whitespace-nowrap">{f.data_pagamento ? new Date(f.data_pagamento + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{f.forma_pagamento || '—'}</TableCell>
-                  <TableCell><StatusBadge status={f.status} /></TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <StatusBadge status={f.status} />
+                      {contratoIncompleto && resumoContrato && (
+                        <p className="text-[11px] text-destructive">Falta faturar {formatCurrency(resumoContrato.valorPendente)}</p>
+                      )}
+                    </div>
+                  </TableCell>
                   {!isCliente && (
                     <TableCell>
                       <DropdownMenu>
@@ -288,9 +297,10 @@ export default function FaturasPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Status</Label>
-                    <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v }))}>
+                    <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v as Fatura['status'] }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="em_revisao">Em Revisão</SelectItem>
                         <SelectItem value="pendente">Pendente</SelectItem>
                         <SelectItem value="pago">Pago</SelectItem>
                         <SelectItem value="atrasado">Atrasado</SelectItem>
