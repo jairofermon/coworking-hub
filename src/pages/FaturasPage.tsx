@@ -88,6 +88,10 @@ export default function FaturasPage() {
     if (!form.cliente_id) e.cliente_id = 'Selecione um cliente';
     if (!form.valor || Number(form.valor) <= 0) e.valor = 'Informe um valor válido';
     if (!form.data_vencimento) e.data_vencimento = 'Informe a data de vencimento';
+    if (contratoSelecionado && totalComFaturaAtual > contratoSelecionado.valor_total) {
+      const excedente = totalComFaturaAtual - contratoSelecionado.valor_total;
+      e.valor = `O contrato permite até R$ ${contratoSelecionado.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Excedente: R$ ${excedente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    }
     setErrors(e);
     if (Object.keys(e).length > 0) return;
 
@@ -101,6 +105,9 @@ export default function FaturasPage() {
       const saved = await upsertFatura(payload);
       await logAudit(isNew ? 'criar' : 'editar', 'fatura', saved.id, { valor: saved.valor });
       toast.success(isNew ? 'Fatura criada com sucesso!' : 'Fatura atualizada.');
+      if (contratoSelecionado && valorPendenteContrato > 0) {
+        toast.warning(`Contrato de R$ ${contratoSelecionado.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Ainda falta faturar R$ ${valorPendenteContrato.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`);
+      }
       setFormOpen(false);
       await loadData();
     } catch (err: any) { toast.error('Erro ao salvar: ' + err.message); }
@@ -136,6 +143,15 @@ export default function FaturasPage() {
   useEffect(() => { setPage(1); }, [busca, filtroStatus]);
 
   const contratosCliente = contratos.filter(c => c.cliente_id === form.cliente_id);
+  const contratoSelecionado = contratos.find(c => c.id === form.contrato_id);
+  const totalFaturadoNoContrato = contratoSelecionado
+    ? faturas
+        .filter(f => f.contrato_id === contratoSelecionado.id && f.status !== 'cancelado' && f.id !== editing?.id)
+        .reduce((sum, f) => sum + f.valor, 0)
+    : 0;
+  const valorAtualFatura = Number(form.valor) || 0;
+  const totalComFaturaAtual = totalFaturadoNoContrato + valorAtualFatura;
+  const valorPendenteContrato = contratoSelecionado ? Math.max(contratoSelecionado.valor_total - totalComFaturaAtual, 0) : 0;
 
   if (loading) return <LoadingState />;
 
