@@ -124,6 +124,18 @@ export async function fetchPlanos(): Promise<Plano[]> {
 }
 
 export async function upsertPlano(p: Omit<Plano, 'id'> & { id?: string }): Promise<Plano> {
+  if (!p.nome?.trim()) {
+    throw new Error('Nome do plano é obrigatório.');
+  }
+
+  if (!Number.isFinite(p.valor_previsto) || p.valor_previsto <= 0) {
+    throw new Error('Informe um valor previsto maior que zero.');
+  }
+
+  if (!Number.isFinite(p.horas_previstas) || p.horas_previstas <= 0) {
+    throw new Error('Informe horas previstas maiores que zero.');
+  }
+
   const payload = {
     nome: p.nome,
     descricao: p.descricao,
