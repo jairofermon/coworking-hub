@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Sala, DisponibilidadeSala, Cliente, Plano, FormaPagamento, Contrato, Agendamento, Fatura } from '@/types';
+import { getContratoFaturamentoResumo } from '@/lib/faturas';
 
 // ── Salas ──
 
@@ -210,11 +211,15 @@ export async function upsertContrato(c: Omit<Contrato, 'id' | 'codigo'> & { id?:
   if (c.id) {
     const { data, error } = await supabase.from('contratos').update(payload).eq('id', c.id).select().single();
     if (error) throw error;
-    return mapContrato(data);
+    const contrato = mapContrato(data);
+    await syncContratoReviewInvoice(contrato);
+    return contrato;
   }
   const { data, error } = await supabase.from('contratos').insert(payload).select().single();
   if (error) throw error;
-  return mapContrato(data);
+  const contrato = mapContrato(data);
+  await syncContratoReviewInvoice(contrato);
+  return contrato;
 }
 
 function mapContrato(r: any): Contrato {
@@ -308,6 +313,9 @@ export async function upsertFatura(f: Omit<Fatura, 'id' | 'created_at' | 'update
     data_pagamento: f.data_pagamento || null, status: f.status,
     forma_pagamento: f.forma_pagamento, observacao: f.observacao,
   };
+  if (f.contrato_id) {
+    await validateContratoInvoiceLimit(f, f.id);
+  }
   if (f.id) {
     const { data, error } = await supabase.from('faturas').update(payload).eq('id', f.id).select().single();
     if (error) throw error;
@@ -331,6 +339,63 @@ function mapFatura(r: any): Fatura {
 export async function deleteFatura(id: string) {
   const { error } = await supabase.from('faturas').delete().eq('id', id);
   if (error) throw error;
+}
+
+async function syncContratoReviewInvoice(contrato: Contrato) {
+  const { data, error } = await supabase
+    .from('faturas')
+    .select('*')
+    .eq('contrato_id', contrato.id)
+    .eq('status', 'em_revisao')
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+
+  const reviewInvoice = data?.[0];
+  const payload = {
+    cliente_id: contrato.cliente_id,
+    contrato_id: contrato.id,
+    valor: contrato.valor_total,
+    data_vencimento: contrato.data_inicio,
+    data_pagamento: null,
+    status: 'em_revisao',
+    forma_pagamento: '',
+    observacao: 'Fatura criada automaticamente a partir do contrato.',
+  };
+
+  if (reviewInvoice) {
+    const { error: updateError } = await supabase.from('faturas').update(payload).eq('id', reviewInvoice.id);
+    if (updateError) throw updateError;
+    return;
+  }
+
+  const { error: insertError } = await supabase.from('faturas').insert(payload);
+  if (insertError) throw insertError;
+}
+
+async function validateContratoInvoiceLimit(
+  fatura: Omit<Fatura, 'created_at' | 'updated_at'> & { id?: string },
+  currentFaturaId?: string,
+) {
+  const [{ data: contratoData, error: contratoError }, { data: faturasData, error: faturasError }] = await Promise.all([
+    supabase.from('contratos').select('*').eq('id', fatura.contrato_id).single(),
+    supabase.from('faturas').select('*').eq('contrato_id', fatura.contrato_id),
+  ]);
+
+  if (contratoError) throw contratoError;
+  if (faturasError) throw faturasError;
+
+  const contrato = mapContrato(contratoData);
+  const faturas = (faturasData ?? []).map(mapFatura);
+  const resumo = getContratoFaturamentoResumo(contrato, faturas, currentFaturaId);
+  const totalComAtual = resumo.valorFaturado + (Number(fatura.valor) || 0);
+
+  if (totalComAtual > resumo.valorContrato) {
+    const excedente = totalComAtual - resumo.valorContrato;
+    throw new Error(
+      `O valor total das faturas ultrapassa o contrato em ${excedente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`,
+    );
+  }
 }
 
 // ── Inativar contratos expirados (client-side fallback) ──
