@@ -20,6 +20,8 @@ import { useAuth } from '@/hooks/useAuth';
 export default function PlanosPage() {
   const { user } = useAuth();
   const isCliente = user?.isCliente ?? false;
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
@@ -84,6 +86,7 @@ export default function PlanosPage() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
+              <TableHead>Valor Previsto</TableHead>
               <TableHead>Horas Previstas</TableHead>
               {!isCliente && <TableHead>Contratos Vinculados</TableHead>}
               <TableHead>Status</TableHead>
@@ -93,7 +96,7 @@ export default function PlanosPage() {
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isCliente ? 4 : 6}>
+                <TableCell colSpan={isCliente ? 5 : 7}>
                   <EmptyState icon={ListChecks} titulo="Nenhum plano encontrado" descricao={busca ? 'Tente alterar os termos de busca.' : 'Nenhum plano disponível.'} />
                 </TableCell>
               </TableRow>
@@ -104,6 +107,7 @@ export default function PlanosPage() {
                 <TableRow key={p.id} className={!p.ativo ? 'opacity-60' : ''}>
                   <TableCell className="font-medium">{p.nome}</TableCell>
                   <TableCell className="text-muted-foreground">{p.descricao || '—'}</TableCell>
+                  <TableCell>{formatCurrency(p.valor_previsto)}</TableCell>
                   <TableCell>{p.horas_previstas > 0 ? `${p.horas_previstas}h` : '—'}</TableCell>
                   {!isCliente && <TableCell className="text-muted-foreground">{ctVinculados}</TableCell>}
                   <TableCell><StatusBadge status={p.ativo} /></TableCell>
