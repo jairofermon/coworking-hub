@@ -254,7 +254,7 @@ export default function AgendamentosPage() {
         )}
       </Card>
 
-      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientesForForm} salas={salas} contratos={contratosForForm} agendamentos={agendamentos} planos={planos} disponibilidades={disponibilidades} />
+      <AgendamentoFormDialog open={formOpen} onOpenChange={setFormOpen} agendamento={editing} onSave={handleSave} clientes={clientesForForm} salas={salas} contratos={contratosForForm} agendamentos={agendamentos} planos={planos} disponibilidades={disponibilidades} isClienteAccess={isCliente} />
       {!isCliente && <AgendamentoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />}
     </div>
   );
