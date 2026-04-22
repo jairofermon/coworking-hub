@@ -34,6 +34,14 @@ const STATUS_FILTERS = [
   { value: 'cancelado', label: 'Canceladas' },
 ];
 
+const FATURA_STATUS_ORDER: Record<Fatura['status'], number> = {
+  em_revisao: 0,
+  atrasado: 1,
+  pendente: 2,
+  cancelado: 3,
+  pago: 4,
+};
+
 export default function FaturasPage() {
   const { user } = useAuth();
   const isCliente = user?.isCliente ?? false;
@@ -129,19 +137,57 @@ export default function FaturasPage() {
 
   const faturamentoPorContrato = useMemo(() => buildContratoFaturamentoMap(contratos, faturas), [contratos, faturas]);
 
-  const filtered = useMemo(() => {
+  const searchableFaturas = useMemo(() => {
     return faturas.filter(f => {
       if (isCliente && clienteId && f.cliente_id !== clienteId) return false;
-      if (filtroStatus === 'incompletas') {
-        const resumo = f.contrato_id ? faturamentoPorContrato[f.contrato_id] : undefined;
-        if (!resumo?.incompleto) return false;
-      } else if (filtroStatus !== 'all' && f.status !== filtroStatus) return false;
       if (!busca) return true;
       const q = busca.toLowerCase();
       const cliente = clientes.find(c => c.id === f.cliente_id);
       return (cliente?.nome_razao_social.toLowerCase().includes(q)) || (cliente?.cpf_cnpj?.toLowerCase().includes(q)) || f.data_vencimento.includes(busca);
     });
-  }, [faturas, busca, filtroStatus, clientes, isCliente, clienteId, faturamentoPorContrato]);
+  }, [faturas, busca, clientes, isCliente, clienteId]);
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: searchableFaturas.length,
+      incompletas: 0,
+      em_revisao: 0,
+      pendente: 0,
+      pago: 0,
+      atrasado: 0,
+      cancelado: 0,
+    };
+
+    searchableFaturas.forEach((fatura) => {
+      counts[fatura.status] = (counts[fatura.status] ?? 0) + 1;
+      const resumo = fatura.contrato_id ? faturamentoPorContrato[fatura.contrato_id] : undefined;
+      if (resumo?.incompleto) counts.incompletas += 1;
+    });
+
+    return counts;
+  }, [searchableFaturas, faturamentoPorContrato]);
+
+  const filtered = useMemo(() => {
+    return searchableFaturas
+      .filter(f => {
+        if (filtroStatus === 'incompletas') {
+          const resumo = f.contrato_id ? faturamentoPorContrato[f.contrato_id] : undefined;
+          return Boolean(resumo?.incompleto);
+        }
+
+        if (filtroStatus === 'all') return true;
+        return f.status === filtroStatus;
+      })
+      .sort((a, b) => {
+        const statusDiff = FATURA_STATUS_ORDER[a.status] - FATURA_STATUS_ORDER[b.status];
+        if (statusDiff !== 0) return statusDiff;
+
+        const dueDateDiff = a.data_vencimento.localeCompare(b.data_vencimento);
+        if (dueDateDiff !== 0) return dueDateDiff;
+
+        return a.created_at.localeCompare(b.created_at);
+      });
+  }, [searchableFaturas, filtroStatus, faturamentoPorContrato]);
 
   const paginated = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -172,11 +218,20 @@ export default function FaturasPage() {
 
       <FilterBar placeholder="Buscar por cliente ou data..." value={busca} onChange={setBusca}>
         <div className="flex gap-1">
-          {STATUS_FILTERS.map(f => (
-            <Button key={f.value} variant={filtroStatus === f.value ? 'default' : 'outline'} size="sm" className="h-8 text-xs" onClick={() => setFiltroStatus(f.value)}>
-              {f.label}
-            </Button>
-          ))}
+          {STATUS_FILTERS.map(f => {
+            const count = statusCounts[f.value] ?? 0;
+
+            return (
+              <Button key={f.value} variant={filtroStatus === f.value ? 'default' : 'outline'} size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setFiltroStatus(f.value)}>
+                <span>{f.label}</span>
+                {count > 0 && (
+                  <span className="rounded-sm bg-background/70 px-1.5 py-0.5 text-[11px] leading-none text-foreground">
+                    {count}
+                  </span>
+                )}
+              </Button>
+            );
+          })}
         </div>
       </FilterBar>
 
