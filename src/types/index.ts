@@ -91,7 +91,7 @@ export interface Fatura {
   valor: number;
   data_vencimento: string;
   data_pagamento: string;
-  status: 'pendente' | 'pago' | 'atrasado' | 'cancelado';
+  status: 'em_revisao' | 'pendente' | 'pago' | 'atrasado' | 'cancelado';
   forma_pagamento: string;
   observacao: string;
   created_at: string;
