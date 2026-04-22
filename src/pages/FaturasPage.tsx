@@ -264,6 +264,14 @@ export default function FaturasPage() {
                       {contratosCliente.map(c => <SelectItem key={c.id} value={c.id}>{c.codigo}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {contratoSelecionado && (
+                    <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+                      <div className="flex items-center justify-between gap-3"><span>Valor do contrato</span><span className="font-medium text-foreground">R$ {contratoSelecionado.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>Já faturado</span><span>R$ {totalFaturadoNoContrato.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                      <div className="flex items-center justify-between gap-3"><span>Após esta fatura</span><span>R$ {totalComFaturaAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                      <div className="flex items-center justify-between gap-3 border-t pt-1"><span>Falta faturar</span><span className="font-medium text-foreground">R$ {valorPendenteContrato.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                    </div>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
