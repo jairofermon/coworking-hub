@@ -352,6 +352,10 @@ async function syncContratoReviewInvoice(contrato: Contrato) {
   if (error) throw error;
 
   const reviewInvoice = data?.[0];
+  if (reviewInvoice) {
+    return;
+  }
+
   const payload = {
     cliente_id: contrato.cliente_id,
     contrato_id: contrato.id,
@@ -363,18 +367,12 @@ async function syncContratoReviewInvoice(contrato: Contrato) {
     observacao: 'Fatura criada automaticamente a partir do contrato.',
   };
 
-  if (reviewInvoice) {
-    const { error: updateError } = await supabase.from('faturas').update(payload).eq('id', reviewInvoice.id);
-    if (updateError) throw updateError;
-    return;
-  }
-
   const { error: insertError } = await supabase.from('faturas').insert(payload);
   if (insertError) throw insertError;
 }
 
 async function validateContratoInvoiceLimit(
-  fatura: Omit<Fatura, 'created_at' | 'updated_at'> & { id?: string },
+  fatura: Omit<Fatura, 'id' | 'created_at' | 'updated_at'> & { id?: string },
   currentFaturaId?: string,
 ) {
   const [{ data: contratoData, error: contratoError }, { data: faturasData, error: faturasError }] = await Promise.all([
