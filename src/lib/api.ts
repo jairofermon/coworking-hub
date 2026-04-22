@@ -297,10 +297,33 @@ export async function fetchFaturas(clienteId?: string): Promise<Fatura[]> {
   if (clienteId) q = q.eq('cliente_id', clienteId);
   const { data, error } = await q;
   if (error) throw error;
+  const hoje = new Date().toISOString().split('T')[0];
+  const faturasAtrasadas = (data ?? []).filter(
+    (r: any) =>
+      r.data_vencimento < hoje &&
+      r.status !== 'pago' &&
+      r.status !== 'cancelado' &&
+      r.status !== 'atrasado',
+  );
+
+  if (faturasAtrasadas.length > 0) {
+    const ids = faturasAtrasadas.map((fatura: any) => fatura.id);
+    const { error: updateError } = await supabase
+      .from('faturas')
+      .update({ status: 'atrasado' })
+      .in('id', ids);
+
+    if (updateError) throw updateError;
+  }
+
   return (data ?? []).map((r: any) => ({
     id: r.id, cliente_id: r.cliente_id, contrato_id: r.contrato_id ?? '',
     valor: Number(r.valor), data_vencimento: r.data_vencimento,
-    data_pagamento: r.data_pagamento ?? '', status: r.status as Fatura['status'],
+    data_pagamento: r.data_pagamento ?? '',
+    status:
+      r.data_vencimento < hoje && r.status !== 'pago' && r.status !== 'cancelado'
+        ? 'atrasado'
+        : (r.status as Fatura['status']),
     forma_pagamento: r.forma_pagamento ?? '', observacao: r.observacao ?? '',
     created_at: r.created_at, updated_at: r.updated_at,
   }));
