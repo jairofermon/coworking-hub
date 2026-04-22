@@ -42,6 +42,7 @@ const baseStyle = `
     .badge-encerrado { background: #f3f4f6; color: #374151; }
     .badge-cancelado { background: #fee2e2; color: #991b1b; }
     .badge-confirmado { background: #dcfce7; color: #166534; }
+    .badge-em_revisao { background: #e5e7eb; color: #111827; }
     .badge-pendente { background: #fef3c7; color: #92400e; }
     .badge-pago { background: #dcfce7; color: #166534; }
     .badge-atrasado { background: #fee2e2; color: #991b1b; }

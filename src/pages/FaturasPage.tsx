@@ -22,9 +22,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ClienteSearchSelect } from '@/components/ClienteSearchSelect';
+import { buildContratoFaturamentoMap, formatCurrency, getContratoFaturamentoResumo } from '@/lib/faturas';
 
 const STATUS_FILTERS = [
   { value: 'all', label: 'Todas' },
+  { value: 'incompletas', label: 'Com pendência' },
+  { value: 'em_revisao', label: 'Em Revisão' },
   { value: 'pendente', label: 'Pendentes' },
   { value: 'pago', label: 'Pagas' },
   { value: 'atrasado', label: 'Atrasadas' },
@@ -52,7 +55,7 @@ export default function FaturasPage() {
 
   const [form, setForm] = useState({
     cliente_id: '', contrato_id: '', valor: '', data_vencimento: '',
-    data_pagamento: '', status: 'pendente', forma_pagamento: '', observacao: '',
+    data_pagamento: '', status: 'pendente' as Fatura['status'], forma_pagamento: '', observacao: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -124,16 +127,21 @@ export default function FaturasPage() {
     } catch (err: any) { toast.error('Erro ao excluir: ' + err.message); }
   }
 
+  const faturamentoPorContrato = useMemo(() => buildContratoFaturamentoMap(contratos, faturas), [contratos, faturas]);
+
   const filtered = useMemo(() => {
     return faturas.filter(f => {
       if (isCliente && clienteId && f.cliente_id !== clienteId) return false;
-      if (filtroStatus !== 'all' && f.status !== filtroStatus) return false;
+      if (filtroStatus === 'incompletas') {
+        const resumo = f.contrato_id ? faturamentoPorContrato[f.contrato_id] : undefined;
+        if (!resumo?.incompleto) return false;
+      } else if (filtroStatus !== 'all' && f.status !== filtroStatus) return false;
       if (!busca) return true;
       const q = busca.toLowerCase();
       const cliente = clientes.find(c => c.id === f.cliente_id);
       return (cliente?.nome_razao_social.toLowerCase().includes(q)) || (cliente?.cpf_cnpj?.toLowerCase().includes(q)) || f.data_vencimento.includes(busca);
     });
-  }, [faturas, busca, filtroStatus, clientes, isCliente, clienteId]);
+  }, [faturas, busca, filtroStatus, clientes, isCliente, clienteId, faturamentoPorContrato]);
 
   const paginated = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -144,14 +152,13 @@ export default function FaturasPage() {
 
   const contratosCliente = contratos.filter(c => c.cliente_id === form.cliente_id);
   const contratoSelecionado = contratos.find(c => c.id === form.contrato_id);
-  const totalFaturadoNoContrato = contratoSelecionado
-    ? faturas
-        .filter(f => f.contrato_id === contratoSelecionado.id && f.status !== 'cancelado' && f.id !== editing?.id)
-        .reduce((sum, f) => sum + f.valor, 0)
-    : 0;
+  const resumoContratoSelecionado = contratoSelecionado
+    ? getContratoFaturamentoResumo(contratoSelecionado, faturas, editing?.id)
+    : null;
+  const totalFaturadoNoContrato = resumoContratoSelecionado?.valorFaturado ?? 0;
   const valorAtualFatura = Number(form.valor) || 0;
   const totalComFaturaAtual = totalFaturadoNoContrato + valorAtualFatura;
-  const valorPendenteContrato = contratoSelecionado ? Math.max(contratoSelecionado.valor_total - totalComFaturaAtual, 0) : 0;
+  const valorPendenteContrato = contratoSelecionado ? Math.max((resumoContratoSelecionado?.valorContrato ?? 0) - totalComFaturaAtual, 0) : 0;
 
   if (loading) return <LoadingState />;
 
@@ -198,15 +205,24 @@ export default function FaturasPage() {
             {paginated.map(f => {
               const cliente = clientes.find(c => c.id === f.cliente_id);
               const contrato = contratos.find(c => c.id === f.contrato_id);
+              const resumoContrato = f.contrato_id ? faturamentoPorContrato[f.contrato_id] : undefined;
+              const contratoIncompleto = Boolean(resumoContrato?.incompleto);
               return (
-                <TableRow key={f.id}>
+                <TableRow key={f.id} className={contratoIncompleto ? 'bg-destructive/10 hover:bg-destructive/15' : undefined}>
                   {!isCliente && <TableCell className="font-medium">{cliente?.nome_razao_social ?? '—'}</TableCell>}
                   <TableCell className="font-mono text-xs">{contrato?.codigo || '—'}</TableCell>
                   <TableCell className="font-medium">R$ {f.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell className="whitespace-nowrap">{new Date(f.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell className="text-muted-foreground whitespace-nowrap">{f.data_pagamento ? new Date(f.data_pagamento + 'T00:00:00').toLocaleDateString('pt-BR') : '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{f.forma_pagamento || '—'}</TableCell>
-                  <TableCell><StatusBadge status={f.status} /></TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <StatusBadge status={f.status} />
+                      {contratoIncompleto && resumoContrato && (
+                        <p className="text-[11px] text-destructive">Falta faturar {formatCurrency(resumoContrato.valorPendente)}</p>
+                      )}
+                    </div>
+                  </TableCell>
                   {!isCliente && (
                     <TableCell>
                       <DropdownMenu>
@@ -281,9 +297,10 @@ export default function FaturasPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Status</Label>
-                    <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v }))}>
+                    <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v as Fatura['status'] }))}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="em_revisao">Em Revisão</SelectItem>
                         <SelectItem value="pendente">Pendente</SelectItem>
                         <SelectItem value="pago">Pago</SelectItem>
                         <SelectItem value="atrasado">Atrasado</SelectItem>
