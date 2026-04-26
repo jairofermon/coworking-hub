@@ -256,7 +256,7 @@ export default function ContratosPage() {
       </Card>
       {!isCliente && (
         <>
-          <ContratoFormDialog open={formOpen} onOpenChange={setFormOpen} contrato={editing} onSave={handleSave} clientes={clientes} salas={salas} planos={planos} formasPagamento={formas} />
+          <ContratoFormDialog open={formOpen} onOpenChange={setFormOpen} contrato={editing} onSave={handleSave} clientes={clientes} salas={salas} planos={planos} formasPagamento={formas} planoSalas={planoSalas} />
           <ContratoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} />
         </>
       )}
