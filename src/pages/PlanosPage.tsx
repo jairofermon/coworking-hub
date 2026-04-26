@@ -25,6 +25,8 @@ export default function PlanosPage() {
 
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [salas, setSalas] = useState<Sala[]>([]);
+  const [planoSalas, setPlanoSalas] = useState<{ plano_id: string; sala_id: string }[]>([]);
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -34,8 +36,8 @@ export default function PlanosPage() {
 
   async function loadData() {
     try {
-      const [pl, ct] = await Promise.all([fetchPlanos(), fetchContratos()]);
-      setPlanos(pl); setContratos(ct);
+      const [pl, ct, sl, ps] = await Promise.all([fetchPlanos(), fetchContratos(), fetchSalas(), fetchPlanoSalas()]);
+      setPlanos(pl); setContratos(ct); setSalas(sl); setPlanoSalas(ps);
     } catch (e: any) { toast.error('Erro ao carregar planos: ' + e.message); }
     finally { setLoading(false); }
   }
@@ -44,10 +46,16 @@ export default function PlanosPage() {
 
   const filtered = planos.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()));
 
-  async function handleSave(plano: Plano) {
+  function salasDoPlano(planoId: string): Sala[] {
+    const ids = planoSalas.filter(ps => ps.plano_id === planoId).map(ps => ps.sala_id);
+    return salas.filter(s => ids.includes(s.id));
+  }
+
+  async function handleSave(plano: Plano, salaIds: string[]) {
     try {
       const isNew = !plano.id;
       const saved = await upsertPlano(plano);
+      await savePlanoSalas(saved.id, salaIds);
       await logAudit(isNew ? 'criar' : 'editar', 'plano', saved.id, { nome: saved.nome });
       toast.success(isNew ? 'Plano criado com sucesso!' : 'Plano atualizado.');
       await loadData();
