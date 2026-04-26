@@ -112,7 +112,12 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
           </div>
           <div className="space-y-2">
             <Label>Sala *</Label>
-            <Select value={form.sala_id} onValueChange={v => f('sala_id', v)}>
+            <Select value={form.sala_id} onValueChange={v => {
+              setForm(prev => {
+                const planoCompativel = prev.plano_id && planoSalas.some(ps => ps.plano_id === prev.plano_id && ps.sala_id === v);
+                return { ...prev, sala_id: v, plano_id: planoCompativel ? prev.plano_id : '', valor_total: planoCompativel ? prev.valor_total : '' };
+              });
+            }}>
               <SelectTrigger className={errors.sala_id ? 'border-destructive' : ''}><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>{salas.filter(s => s.ativo).map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}</SelectContent>
             </Select>
