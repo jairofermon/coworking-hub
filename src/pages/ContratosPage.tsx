@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { Contrato, Cliente, Sala, Plano, FormaPagamento, Agendamento } from '@/types';
 import { ContratoFormDialog } from '@/components/contratos/ContratoFormDialog';
 import { ContratoDeleteDialog } from '@/components/contratos/ContratoDeleteDialog';
-import { fetchContratos, upsertContrato, deleteContrato, fetchClientes, fetchSalas, fetchPlanos, fetchFormasPagamento, inactivateExpiredContracts, fetchAgendamentos } from '@/lib/api';
+import { fetchContratos, upsertContrato, deleteContrato, fetchClientes, fetchSalas, fetchPlanos, fetchFormasPagamento, inactivateExpiredContracts, fetchAgendamentos, fetchPlanoSalas } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import { generateContratoPdf } from '@/lib/pdf';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,6 +44,7 @@ export default function ContratosPage() {
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [formas, setFormas] = useState<FormaPagamento[]>([]);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [planoSalas, setPlanoSalas] = useState<{ plano_id: string; sala_id: string }[]>([]);
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -59,8 +60,8 @@ export default function ContratosPage() {
   async function loadData() {
     try {
       await inactivateExpiredContracts().catch(() => {});
-      const [ct, cl, sl, pl, fp, ag] = await Promise.all([fetchContratos(), fetchClientes(), fetchSalas(), fetchPlanos(), fetchFormasPagamento(), fetchAgendamentos()]);
-      setContratos(ct); setClientes(cl); setSalas(sl); setPlanos(pl); setFormas(fp); setAgendamentos(ag);
+      const [ct, cl, sl, pl, fp, ag, ps] = await Promise.all([fetchContratos(), fetchClientes(), fetchSalas(), fetchPlanos(), fetchFormasPagamento(), fetchAgendamentos(), fetchPlanoSalas()]);
+      setContratos(ct); setClientes(cl); setSalas(sl); setPlanos(pl); setFormas(fp); setAgendamentos(ag); setPlanoSalas(ps);
     } catch (e: any) { toast.error('Erro ao carregar contratos: ' + e.message); }
     finally { setLoading(false); }
   }
