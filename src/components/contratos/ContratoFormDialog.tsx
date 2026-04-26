@@ -20,9 +20,10 @@ interface Props {
   salas: Sala[];
   planos: Plano[];
   formasPagamento: FormaPagamento[];
+  planoSalas: { plano_id: string; sala_id: string }[];
 }
 
-export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clientes, salas, planos, formasPagamento }: Props) {
+export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clientes, salas, planos, formasPagamento, planoSalas }: Props) {
   const isEdit = !!contrato;
   const [form, setForm] = useState({
     cliente_id: '', sala_id: '', plano_id: '', forma_pagamento_id: '',
@@ -123,8 +124,18 @@ export function ContratoFormDialog({ open, onOpenChange, contrato, onSave, clien
               const planoSelecionado = planos.find(p => p.id === v);
               setForm(prev => ({ ...prev, plano_id: v, valor_total: planoSelecionado?.valor_previsto ? String(planoSelecionado.valor_previsto) : '' }));
             }}>
-              <SelectTrigger className={errors.plano_id ? 'border-destructive' : ''}><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>{planos.filter(p => p.ativo).map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}</SelectContent>
+              <SelectTrigger className={errors.plano_id ? 'border-destructive' : ''}><SelectValue placeholder={form.sala_id ? 'Selecione...' : 'Selecione uma sala primeiro'} /></SelectTrigger>
+              <SelectContent>
+                {(() => {
+                  const planosDaSala = form.sala_id
+                    ? planos.filter(p => p.ativo && planoSalas.some(ps => ps.plano_id === p.id && ps.sala_id === form.sala_id))
+                    : [];
+                  if (planosDaSala.length === 0) {
+                    return <div className="px-2 py-1.5 text-sm text-muted-foreground">{form.sala_id ? 'Nenhum plano disponível para esta sala' : 'Selecione uma sala primeiro'}</div>;
+                  }
+                  return planosDaSala.map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>);
+                })()}
+              </SelectContent>
             </Select>
             {errors.plano_id && <p className="text-sm text-destructive">{errors.plano_id}</p>}
           </div>
