@@ -376,6 +376,42 @@ export type Database = {
         }
         Relationships: []
       }
+      plano_salas: {
+        Row: {
+          created_at: string
+          id: string
+          plano_id: string
+          sala_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plano_id: string
+          sala_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plano_id?: string
+          sala_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plano_salas_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_salas_sala_id_fkey"
+            columns: ["sala_id"]
+            isOneToOne: false
+            referencedRelation: "salas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planos: {
         Row: {
           ativo: boolean
