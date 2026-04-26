@@ -158,6 +158,24 @@ export async function deletePlano(id: string) {
   if (error) throw error;
 }
 
+// ── Plano ↔ Salas ──
+
+export async function fetchPlanoSalas(): Promise<{ plano_id: string; sala_id: string }[]> {
+  const { data, error } = await (supabase as any).from('plano_salas').select('plano_id, sala_id');
+  if (error) throw error;
+  return (data ?? []) as { plano_id: string; sala_id: string }[];
+}
+
+export async function savePlanoSalas(planoId: string, salaIds: string[]) {
+  const { error: delError } = await (supabase as any).from('plano_salas').delete().eq('plano_id', planoId);
+  if (delError) throw delError;
+  if (salaIds.length === 0) return;
+  const { error } = await (supabase as any).from('plano_salas').insert(
+    salaIds.map(sala_id => ({ plano_id: planoId, sala_id }))
+  );
+  if (error) throw error;
+}
+
 // ── Formas de Pagamento ──
 
 export async function fetchFormasPagamento(): Promise<FormaPagamento[]> {

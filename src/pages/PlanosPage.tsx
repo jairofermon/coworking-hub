@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Plus, MoreHorizontal, Pencil, Trash2, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
-import { Plano, Contrato } from '@/types';
+import { Plano, Contrato, Sala } from '@/types';
 import { PlanoFormDialog } from '@/components/planos/PlanoFormDialog';
 import { PlanoDeleteDialog } from '@/components/planos/PlanoDeleteDialog';
-import { fetchPlanos, upsertPlano, deletePlano, fetchContratos } from '@/lib/api';
+import { fetchPlanos, upsertPlano, deletePlano, fetchContratos, fetchSalas, fetchPlanoSalas, savePlanoSalas } from '@/lib/api';
 import { logAudit } from '@/lib/audit';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -25,6 +25,8 @@ export default function PlanosPage() {
 
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [contratos, setContratos] = useState<Contrato[]>([]);
+  const [salas, setSalas] = useState<Sala[]>([]);
+  const [planoSalas, setPlanoSalas] = useState<{ plano_id: string; sala_id: string }[]>([]);
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -34,8 +36,8 @@ export default function PlanosPage() {
 
   async function loadData() {
     try {
-      const [pl, ct] = await Promise.all([fetchPlanos(), fetchContratos()]);
-      setPlanos(pl); setContratos(ct);
+      const [pl, ct, sl, ps] = await Promise.all([fetchPlanos(), fetchContratos(), fetchSalas(), fetchPlanoSalas()]);
+      setPlanos(pl); setContratos(ct); setSalas(sl); setPlanoSalas(ps);
     } catch (e: any) { toast.error('Erro ao carregar planos: ' + e.message); }
     finally { setLoading(false); }
   }
@@ -44,10 +46,16 @@ export default function PlanosPage() {
 
   const filtered = planos.filter(p => p.nome.toLowerCase().includes(busca.toLowerCase()));
 
-  async function handleSave(plano: Plano) {
+  function salasDoPlano(planoId: string): Sala[] {
+    const ids = planoSalas.filter(ps => ps.plano_id === planoId).map(ps => ps.sala_id);
+    return salas.filter(s => ids.includes(s.id));
+  }
+
+  async function handleSave(plano: Plano, salaIds: string[]) {
     try {
       const isNew = !plano.id;
       const saved = await upsertPlano(plano);
+      await savePlanoSalas(saved.id, salaIds);
       await logAudit(isNew ? 'criar' : 'editar', 'plano', saved.id, { nome: saved.nome });
       toast.success(isNew ? 'Plano criado com sucesso!' : 'Plano atualizado.');
       await loadData();
@@ -88,6 +96,7 @@ export default function PlanosPage() {
               <TableHead>Descrição</TableHead>
               <TableHead>Valor Previsto</TableHead>
               <TableHead>Horas Previstas</TableHead>
+              <TableHead>Salas Disponíveis</TableHead>
               {!isCliente && <TableHead>Contratos Vinculados</TableHead>}
               <TableHead>Status</TableHead>
               {!isCliente && <TableHead className="w-12" />}
@@ -96,19 +105,21 @@ export default function PlanosPage() {
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isCliente ? 5 : 7}>
+                <TableCell colSpan={isCliente ? 6 : 8}>
                   <EmptyState icon={ListChecks} titulo="Nenhum plano encontrado" descricao={busca ? 'Tente alterar os termos de busca.' : 'Nenhum plano disponível.'} />
                 </TableCell>
               </TableRow>
             )}
             {filtered.map((p) => {
               const ctVinculados = contratos.filter(c => c.plano_id === p.id).length;
+              const planoSalasNomes = salasDoPlano(p.id).map(s => s.nome);
               return (
                 <TableRow key={p.id} className={!p.ativo ? 'opacity-60' : ''}>
                   <TableCell className="font-medium">{p.nome}</TableCell>
                   <TableCell className="text-muted-foreground">{p.descricao || '—'}</TableCell>
                   <TableCell>{formatCurrency(p.valor_previsto)}</TableCell>
                   <TableCell>{p.horas_previstas > 0 ? `${p.horas_previstas}h` : '—'}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{planoSalasNomes.length > 0 ? planoSalasNomes.join(', ') : '—'}</TableCell>
                   {!isCliente && <TableCell className="text-muted-foreground">{ctVinculados}</TableCell>}
                   <TableCell><StatusBadge status={p.ativo} /></TableCell>
                   {!isCliente && (
@@ -131,7 +142,14 @@ export default function PlanosPage() {
       </Card>
       {!isCliente && (
         <>
-          <PlanoFormDialog open={formOpen} onOpenChange={setFormOpen} plano={editing} onSave={handleSave} />
+          <PlanoFormDialog
+            open={formOpen}
+            onOpenChange={setFormOpen}
+            plano={editing}
+            salas={salas}
+            salaIdsIniciais={editing ? planoSalas.filter(ps => ps.plano_id === editing.id).map(ps => ps.sala_id) : []}
+            onSave={handleSave}
+          />
           <PlanoDeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} plano={deleting} onConfirm={handleDelete} />
         </>
       )}
