@@ -76,7 +76,18 @@ export function PlanoFormDialog({ open, onOpenChange, plano, salas, salaIdsInici
             <p className="text-xs text-muted-foreground">Quantidade de horas que o plano permite agendar no período do contrato</p>
           </div>
           <div className="space-y-2">
-            <Label>Salas disponíveis no plano *</Label>
+            <div className="flex items-center justify-between">
+              <Label>Salas disponíveis no plano *</Label>
+              {salasAtivas.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSalaIds(salaIds.length === salasAtivas.length ? [] : salasAtivas.map(s => s.id))}
+                  className="text-xs text-primary hover:underline"
+                >
+                  {salaIds.length === salasAtivas.length ? 'Desmarcar todas' : 'Selecionar todas'}
+                </button>
+              )}
+            </div>
             <div className={`rounded-lg border p-3 space-y-2 max-h-48 overflow-y-auto ${errors.salas ? 'border-destructive' : ''}`}>
               {salasAtivas.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma sala ativa cadastrada.</p>}
               {salasAtivas.map(s => (

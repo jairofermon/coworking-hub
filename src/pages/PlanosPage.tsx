@@ -119,7 +119,13 @@ export default function PlanosPage() {
                   <TableCell className="text-muted-foreground">{p.descricao || '—'}</TableCell>
                   <TableCell>{formatCurrency(p.valor_previsto)}</TableCell>
                   <TableCell>{p.horas_previstas > 0 ? `${p.horas_previstas}h` : '—'}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{planoSalasNomes.length > 0 ? planoSalasNomes.join(', ') : '—'}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">
+                    {planoSalasNomes.length > 0 ? (
+                      <div className="flex flex-col gap-0.5">
+                        {planoSalasNomes.map((n, i) => <span key={i}>{n}</span>)}
+                      </div>
+                    ) : '—'}
+                  </TableCell>
                   {!isCliente && <TableCell className="text-muted-foreground">{ctVinculados}</TableCell>}
                   <TableCell><StatusBadge status={p.ativo} /></TableCell>
                   {!isCliente && (
